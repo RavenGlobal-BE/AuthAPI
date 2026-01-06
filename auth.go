@@ -9,19 +9,18 @@ import (
 )
 
 func main() {
-	var auth authorization.Authorization
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
 	r.GET("/ping", func(c *gin.Context) {
 		password := c.Query("passtest")
-		hash, err := auth.HashPassword(password)
+		hash, err := authorization.HashPassword(password)
 		if err != nil {
 
 		}
 
-		match := auth.CheckPasswordHash(password, hash)
+		match := authorization.CheckPasswordHash(password, hash)
 		fmt.Println("Match:   ", match)
 
 		c.JSON(http.StatusOK, gin.H{
