@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	authorization "raven/auth/Authorization"
+	authorization "raven/auth/Authorization" // Authorization Module
 
 	"github.com/gin-gonic/gin" //Gin Web Framework
 )
@@ -13,7 +13,9 @@ func main() {
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
-	r.GET("/ping", func(c *gin.Context) {
+	authorization.DbTest()
+
+	r.GET("/login", func(c *gin.Context) {
 		password := c.Query("passtest")
 		hash, err := authorization.HashPassword(password)
 		if err != nil {
