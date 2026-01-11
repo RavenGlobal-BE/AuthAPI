@@ -21,12 +21,17 @@ func main() {
 		}
 
 		err := c.ShouldBindJSON(&loginData)
-
 		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 		}
 
-		c.JSON(200, gin.H{"E-Mail Input": loginData.Email, "Password Input": loginData.Password})
+		var user = engine.Users{}
+		err = engine.ExecuteQuery("SELECT * FROM users WHERE email = ?", &user, loginData.Email)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+		} else {
+			c.JSON(200, gin.H{"E-Mail Input": loginData.Email, "Password Input": loginData.Password, "Hashed Password from DB": &user.Hashed_password})
+		}
 	})
 
 	r.GET("/about", func(c *gin.Context) {
