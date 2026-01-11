@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	authorization "raven/auth/Authorization" // Authorization Module
+	"fmt"                              // Authorization Module
+	engine "raven/auth/DatabaseEngine" // Database Engine Module
 
 	"github.com/gin-gonic/gin" //Gin Web Framework
 )
@@ -13,21 +12,12 @@ func main() {
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
-	authorization.DbTest()
+	engine.ConnectDB()
 
 	r.GET("/login", func(c *gin.Context) {
 		password := c.Query("passtest")
-		hash, err := authorization.HashPassword(password)
-		if err != nil {
 
-		}
-
-		match := authorization.CheckPasswordHash(password, hash)
-		fmt.Println("Match:   ", match)
-
-		c.JSON(http.StatusOK, gin.H{
-			"encryptedPass": hash,
-		})
+		c.JSON(200, gin.H{"PasswordInput": password})
 	})
 
 	fmt.Println("\033[33;1mWebserver started \033[0m")
