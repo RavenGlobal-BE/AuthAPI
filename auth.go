@@ -38,6 +38,6 @@ func main() {
 		c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", version, build)})
 	})
 
-	fmt.Println("\033[33;1mWebserver started \033[0m")
-	r.Run()
+	fmt.Printf("Webserver started. (Port %d)", port)
+	r.Run(fmt.Sprintf(":%d", port))
 }
