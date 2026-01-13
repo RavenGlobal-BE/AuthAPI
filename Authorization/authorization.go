@@ -20,12 +20,12 @@ func CheckPasswordHash(password string, hash string) bool {
 	return err == nil
 }
 
-func GenerateToken() (string, error) {
+func GenerateToken() (*string, error) {
 	//Generates a random 32-byte token
 	tokenBytes := make([]byte, 32)
 	_, err := rand.Read(tokenBytes)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	token := hex.EncodeToString(tokenBytes)
 
@@ -40,5 +40,5 @@ func GenerateToken() (string, error) {
 	fmt.Println("hashedToken:", hashedToken)
 	fmt.Println("expiresAt:", expiresAt)
 
-	return token, nil
+	return &token, nil
 }

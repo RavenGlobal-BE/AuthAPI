@@ -34,7 +34,7 @@ func main() {
 			if result {
 				token, err := auth.GenerateToken()
 				if err != nil {
-					c.JSON(500, gin.H{"error": "Failed to generate token"})
+					c.JSON(500, gin.H{"error": "Failed to generate token. Try again later."})
 					return
 				}
 
