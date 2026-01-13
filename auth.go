@@ -32,7 +32,13 @@ func main() {
 			c.JSON(500, gin.H{"error": err.Error()})
 		} else {
 			if result {
-				c.JSON(200, gin.H{"Auth successful": loginData.Email, "Password Input": loginData.Password, "Hashed Password from DB": &user.Hashed_password})
+				token, err := auth.GenerateToken()
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Failed to generate token"})
+					return
+				}
+
+				c.JSON(200, gin.H{"Auth successful": loginData.Email, "Token": token, "Password Input": loginData.Password, "Hashed Password from DB": &user.Hashed_password})
 			} else {
 				c.JSON(401, gin.H{"Auth failed": loginData.Email})
 			}
