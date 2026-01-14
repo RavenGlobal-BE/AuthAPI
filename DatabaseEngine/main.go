@@ -44,6 +44,7 @@ func ExecuteQuery(query string, destination any, args ...any) error {
 
 func ExecuteQueryInsert(query string, args ...any) (int64, error) {
 	result, err := db.Exec(query, args...)
+
 	if err != nil {
 		fmt.Println("Error executing insert query:", err)
 		return 0, err

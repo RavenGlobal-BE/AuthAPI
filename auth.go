@@ -23,6 +23,12 @@ func main() {
 
 		err := c.ShouldBindJSON(&loginData) //Bind the received JSON to the loginData struct
 
+		mailValid := auth.EmailIsValid(loginData.Email)
+		if mailValid == false {
+			c.JSON(400, gin.H{"error": "Invalid email format"})
+			return
+		}
+
 		var user = engine.Users{}
 		err = engine.ExecuteQuery("SELECT * FROM users WHERE email = ?", &user, loginData.Email)
 
