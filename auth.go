@@ -44,6 +44,8 @@ func main() {
 					return
 				}
 
+				engine.ExecuteQueryInsert("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, "2025-12-31 23:59:59", "2025-12-31 23:59:59")
+
 				c.JSON(200, gin.H{"Auth successful": loginData.Email, "Token": token, "Password Input": loginData.Password, "Hashed Password from DB": &user.Hashed_password})
 			} else {
 				c.JSON(401, gin.H{"Auth failed": loginData.Email})

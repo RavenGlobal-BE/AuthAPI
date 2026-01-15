@@ -22,7 +22,7 @@ func EmailIsValid(email string) bool {
 	mail := strings.Split(addr.Address, "@")
 	fmt.Println(mail)
 
-	gmailCheck := gmailUserVerification(mail[0], mail[1]) // mail[1][1:] to remove the "@" character
+	gmailCheck := gmailUserVerification(mail[0], mail[1]) // mail[1] to remove the "@" character
 
 	if !gmailCheck {
 		return false
