@@ -4,8 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -33,12 +31,5 @@ func GenerateToken() (*string, error) {
 	hash := sha256.Sum256([]byte(token))
 	hashedToken := hex.EncodeToString(hash[:])
 
-	//Adds 180 days to the current time for expiration
-	expiresAt := time.Now().AddDate(0, 0, 180).Format("2006-01-02 15:04:05")
-
-	fmt.Println("token:", token)
-	fmt.Println("hashedToken:", hashedToken)
-	fmt.Println("expiresAt:", expiresAt)
-
-	return &token, nil
+	return &hashedToken, nil
 }

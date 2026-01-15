@@ -4,6 +4,7 @@ import (
 	"fmt"
 	auth "raven/auth/Authorization"
 	engine "raven/auth/DatabaseEngine" // Database Engine Module
+	"time"
 
 	"github.com/gin-gonic/gin" //Gin Web Framework
 )
@@ -44,7 +45,8 @@ func main() {
 					return
 				}
 
-				engine.ExecuteQueryInsert("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, "2025-12-31 23:59:59", "2025-12-31 23:59:59")
+				expiredTime := time.Now().AddDate(0, 0, 180).Format("2006-01-02 15:04:05")
+				engine.ExecuteQueryInsert("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime)
 
 				c.JSON(200, gin.H{"Auth successful": loginData.Email, "Token": token, "Password Input": loginData.Password, "Hashed Password from DB": &user.Hashed_password})
 			} else {

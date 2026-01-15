@@ -1,5 +1,5 @@
 # Raven ONE Authentication API
-This is the brand new system Raven will be using for authentication & authorization. It supports both regular logins, registrations, Enterprise SSO (soon) & MFA (soon).
+This is the brand new system Raven will be using for authentication & authorization. It supports both regular logins, registrations, Enterprise SSO (soon) & MFA (soon). Written in **Go(lang)** to prioritize performance where it's the most critical.
 
 ## What does it allow you to do?
 Raven Auth allows you to:
@@ -8,6 +8,7 @@ Raven Auth allows you to:
 - View user settings & modify them (coming soon)
 - Reset your password if they need to (coming soon)
 - Enterprise SSO (coming soon)
+- Tokenization
 
 This implementation also is backwards compatible with older Raven Auth versions along with older builds of websites & apps.
 
