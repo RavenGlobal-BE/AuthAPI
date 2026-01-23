@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	logging "raven/auth/Logging"
+
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -59,18 +61,18 @@ func ExecuteQueryInsert(query string, args ...any) (int64, error) {
 	return lastInsertID, nil
 }
 
-func ConnectDB() {
+func ConnectDB(DBname string) {
 	cfg := mysql.NewConfig()
 	cfg.User = "root"
 	cfg.Passwd = ""
 	cfg.Net = "tcp"
 	cfg.Addr = "127.0.0.1:3306"
-	cfg.DBName = "Accounts"
+	cfg.DBName = DBname
 
 	var err error
 	db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("\033[1m\033[31mERROR\033[0m " + err.Error())
 	}
 
 	db.SetMaxOpenConns(30)
@@ -78,6 +80,6 @@ func ConnectDB() {
 
 	pingErr := db.Ping()
 	if pingErr != nil {
-		log.Fatal(pingErr)
+		logging.Log("Database connection failed", logging.Fatal)
 	}
 }

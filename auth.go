@@ -4,17 +4,20 @@ import (
 	"fmt"
 	auth "raven/auth/Authorization"
 	engine "raven/auth/DatabaseEngine" // Database Engine Module
+	logging "raven/auth/Logging"
 	"time"
 
 	"github.com/gin-gonic/gin" //Gin Web Framework
 )
 
 func main() {
+	logging.Log("Working test", logging.Info)
+
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	r.Use(gin.Recovery())
 
-	engine.ConnectDB() //Pings the DB in advance
+	engine.ConnectDB("Accounts") //Pings the DB in advance with the Accounts database
 
 	r.POST("/login", func(c *gin.Context) {
 		var loginData struct {
