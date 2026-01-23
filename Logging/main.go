@@ -2,7 +2,8 @@ package logging
 
 import (
 	"fmt"
-	"log"
+	"os"
+	"time"
 )
 
 type LogType int
@@ -16,27 +17,28 @@ const (
 	Pass
 	Warning
 	Info
+	Debug
 )
 
-var LogLetterType = map[LogType]string{
-	Bold:  "\033[1m",
-	Reset: "\033[0m",
+var LogLetterType = map[LogType][2]string{
+	Bold:  {"\033[1m"},
+	Reset: {"\033[0m"},
 
-	Error:   "\033[31m", //Red
-	Fatal:   "\033[35m", //Magenta
-	Pass:    "\033[32m", //Green
-	Warning: "\033[33m", //Yellow
-	Info:    "\033[34m", //Blue
+	Debug:   {"\033[30m", "DEBG"}, // Gray
+	Error:   {"\033[31m", "ERRO"}, // Red
+	Fatal:   {"\033[35m", "FATA"}, // Magenta
+	Pass:    {"\033[32m", "NOTI"}, // Green
+	Warning: {"\033[33m", "WARN"}, // Yellow
+	Info:    {"\033[34m", "INFO"}, // Blue
 }
 
 func Log(message string, logType LogType) {
-	if logType == Fatal {
-		log.Fatal(LogLetterType[Fatal] + LogLetterType[Bold] + "ERRO " + LogLetterType[Reset] + message)
-	}
+	current_time := time.Now()
 
-	formattedMessage := formatLogMessage(message, logType)
-	fmt.Println(formattedMessage)
-}
-func formatLogMessage(message string, logType LogType) string {
-	return fmt.Sprintf("%s%s%s", LogLetterType[logType], message, LogLetterType[Reset])
+	finalizedString := fmt.Sprintf("%s%s%s", current_time.Format("3:04PM "), LogLetterType[logType][0]+LogLetterType[Bold][0]+LogLetterType[logType][1]+" "+LogLetterType[Reset][0], message)
+	fmt.Println(finalizedString)
+
+	if logType == Fatal {
+		os.Exit(1)
+	}
 }

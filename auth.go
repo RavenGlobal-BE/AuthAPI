@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	logging.Log("Working test", logging.Info)
+	logging.Log("Starting Raven Auth Server...", logging.Debug)
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
