@@ -3,6 +3,7 @@ package logging
 import (
 	"fmt"
 	"os"
+	config "raven/auth/config"
 	"time"
 )
 
@@ -35,10 +36,15 @@ var LogLetterType = map[LogType][2]string{
 func Log(message string, logType LogType) {
 	current_time := time.Now()
 
+	if config.AllowVerbose == false && logType == Debug {
+		return
+	}
+
 	finalizedString := fmt.Sprintf("%s%s%s", current_time.Format("3:04PM "), LogLetterType[logType][0]+LogLetterType[Bold][0]+LogLetterType[logType][1]+" "+LogLetterType[Reset][0], message)
 	fmt.Println(finalizedString)
 
 	if logType == Fatal {
 		os.Exit(1)
 	}
+
 }

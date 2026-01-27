@@ -3,20 +3,19 @@ package databaseengine
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
-	logging "raven/auth/Logging"
+	logging "raven/auth/logging"
 
 	"github.com/go-sql-driver/mysql"
 )
 
-var db *sql.DB // Database pointer -> Shared across the entire program
+var Db *sql.DB // Database pointer -> Shared across the entire program
 
 func ExecuteQuery(query string, destination any, args ...any) error {
 	switch v := destination.(type) {
 	case *Users:
-		err := db.QueryRow(query, args...).Scan(
+		err := Db.QueryRow(query, args...).Scan(
 			&v.Id,
 			&v.Email,
 			&v.Hashed_password,
@@ -45,7 +44,7 @@ func ExecuteQuery(query string, destination any, args ...any) error {
 }
 
 func ExecuteQueryInsert(query string, args ...any) (int64, error) {
-	result, err := db.Exec(query, args...)
+	result, err := Db.Exec(query, args...)
 
 	if err != nil {
 		fmt.Println("Error executing insert query:", err)
@@ -70,15 +69,15 @@ func ConnectDB(DBname string) {
 	cfg.DBName = DBname
 
 	var err error
-	db, err = sql.Open("mysql", cfg.FormatDSN())
+	Db, err = sql.Open("mysql", cfg.FormatDSN())
 	if err != nil {
-		log.Fatal("\033[1m\033[31mERROR\033[0m " + err.Error())
+		logging.Log(err.Error(), logging.Fatal)
 	}
 
-	db.SetMaxOpenConns(30)
-	db.SetConnMaxIdleTime(5 * time.Minute)
+	Db.SetMaxOpenConns(30)
+	Db.SetConnMaxIdleTime(5 * time.Minute)
 
-	pingErr := db.Ping()
+	pingErr := Db.Ping()
 	if pingErr != nil {
 		logging.Log("Database connection failed", logging.Fatal)
 	}
