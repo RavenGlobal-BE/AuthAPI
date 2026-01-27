@@ -1,9 +1,9 @@
-package logging
+package Logging
 
 import (
 	"fmt"
 	"os"
-	config "raven/auth/config"
+	config "raven/auth/Config"
 	"time"
 )
 

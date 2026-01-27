@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	auth "raven/auth/Authorization"
+	config "raven/auth/Config"
 	engine "raven/auth/DatabaseEngine"
-	config "raven/auth/config"
 	"time"
 
 	"github.com/gin-gonic/gin"

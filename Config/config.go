@@ -1,4 +1,4 @@
-package config
+package Config
 
 /* This config file includes are changeable settings. They're gonna be hardcoded on compile-time. */
 

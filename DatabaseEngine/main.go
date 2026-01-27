@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	logging "raven/auth/logging"
+	logging "raven/auth/Logging"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -43,21 +43,21 @@ func ExecuteQuery(query string, destination any, args ...any) error {
 	}
 }
 
-func ExecuteQueryInsert(query string, args ...any) (int64, error) {
+func ExecuteQueryInsert(query string, args ...any) (string, error) {
 	result, err := Db.Exec(query, args...)
 
 	if err != nil {
 		fmt.Println("Error executing insert query:", err)
-		return 0, err
+		return "", err
 	}
 
 	lastInsertID, err := result.LastInsertId()
 	if err != nil {
 		fmt.Println("Error fetching last insert ID:", err)
-		return 0, err
+		return "", err
 	}
 
-	return lastInsertID, nil
+	return fmt.Sprintf("%d", lastInsertID), nil
 }
 
 func ConnectDB(DBname string) {

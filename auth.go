@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	config "raven/auth/Config"
 	engine "raven/auth/DatabaseEngine"
-	config "raven/auth/config"
-	logging "raven/auth/logging"
+	logging "raven/auth/Logging"
 
 	"github.com/gin-gonic/gin"
 )
