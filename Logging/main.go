@@ -44,7 +44,7 @@ func Log(message string, logType LogType) {
 	fmt.Println(finalizedString)
 
 	if logType == Fatal {
-		os.Exit(1)
+		os.Exit(9)
 	}
 
 }

@@ -8,11 +8,12 @@ import (
 	logging "raven/auth/Logging"
 
 	"github.com/go-sql-driver/mysql"
+	//"github.com/lib/pq"
 )
 
 var Db *sql.DB // Database pointer -> Shared across the entire program
 
-func ExecuteQuery(query string, destination any, args ...any) error {
+func ExecuteQuery(query string, destination any, args ...any) error { //Gets data from the database tables
 	switch v := destination.(type) {
 	case *Users:
 		err := Db.QueryRow(query, args...).Scan(
@@ -81,4 +82,10 @@ func ConnectDB(DBname string) {
 	if pingErr != nil {
 		logging.Log("Database connection failed", logging.Fatal)
 	}
+
+	prepareDB()
+}
+
+func prepareDB() { //Checks whether the database connection has the correct structure
+	Db.Query("CREATE TABLE IF NOT EXISTS sessions (token VARCHAR(255) PRIMARY KEY, user_id INT, created_at TIMESTAMP, expires_at TIMESTAMP)")
 }

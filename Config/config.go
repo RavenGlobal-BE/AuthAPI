@@ -4,7 +4,7 @@ package Config
 
 // Program configurations
 var Debug bool = false
-var AllowVerbose bool = true
+var AllowVerbose bool = false
 
 // Version & Build
 var Version = "2.0"

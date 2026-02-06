@@ -2,7 +2,6 @@ package authorization
 
 import (
 	"errors"
-	"fmt"
 	"net/mail"
 	"strings"
 )
@@ -13,14 +12,11 @@ var InvalidEmailError = errors.New("Invalid E-Mail")
 func EmailIsValid(email string) bool {
 	addr, err := mail.ParseAddress(email)
 
-	fmt.Println(addr)
-
 	if err != nil {
 		return false
 	}
 
 	mail := strings.Split(addr.Address, "@")
-	fmt.Println(mail)
 
 	gmailCheck := gmailUserVerification(mail[0], mail[1]) // mail[1] to remove the "@" character
 

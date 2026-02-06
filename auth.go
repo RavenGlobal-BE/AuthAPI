@@ -27,7 +27,7 @@ func main() {
 	}
 }
 
-func RegisterRoutes(r *gin.Engine) {
-	r.POST("/login", handleLogin)
-	r.GET("/about", handleAbout)
+func RegisterRoutes(router *gin.Engine) {
+	router.POST("/login", handleLogin)
+	router.GET("/about", handleAbout)
 }

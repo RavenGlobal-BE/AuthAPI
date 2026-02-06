@@ -31,21 +31,21 @@ func handleLogin(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
-	} else {
-		if result {
-			token, err := auth.GenerateToken()
-			if err != nil {
-				c.JSON(500, gin.H{"error": "Failed to generate token. Try again later."})
-				return
-			}
+	}
 
-			expiredTime := time.Now().AddDate(0, 0, 180).Format("2006-01-02 15:04:05")
-			engine.ExecuteQueryInsert("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime)
-
-			c.JSON(200, gin.H{"Auth successful": loginData.Email, "Token": token, "Password Input": loginData.Password, "Hashed Password from DB": &user.Hashed_password})
-		} else {
-			c.JSON(401, gin.H{"Auth failed": loginData.Email})
+	if result {
+		token, err := auth.GenerateToken()
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Failed to generate token. Try again later."})
+			return
 		}
+
+		expiredTime := time.Now().AddDate(0, 0, 180)
+		tokenStr, err := engine.ExecuteQueryInsert("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
+
+		c.JSON(200, gin.H{"Token": tokenStr, "ExpiresAt": expiredTime.Unix()})
+	} else {
+		c.JSON(401, gin.H{"Auth failed": loginData.Email})
 	}
 }
 
