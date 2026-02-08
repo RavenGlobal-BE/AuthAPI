@@ -20,7 +20,7 @@ func handleLogin(c *gin.Context) {
 
 	mailValid := auth.EmailIsValid(loginData.Email)
 	if mailValid == false {
-		c.JSON(400, gin.H{"error": "Invalid email format"})
+		c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
 		return
 	}
 
@@ -30,22 +30,26 @@ func handleLogin(c *gin.Context) {
 	result := auth.CheckPasswordHash(loginData.Password, user.Hashed_password)
 
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(500, gin.H{"success": false, "reason": err.Error()})
+		return
 	}
 
 	if result {
 		token, err := auth.GenerateToken()
 		if err != nil {
-			c.JSON(500, gin.H{"error": "Failed to generate token. Try again later."})
+			c.JSON(500, gin.H{"success": false, "reason": "Token generation failed."})
 			return
 		}
 
 		expiredTime := time.Now().AddDate(0, 0, 180)
-		tokenStr, err := engine.InsertQuery("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
+		affectedRows, err := engine.InsertQuery("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
 
-		c.JSON(200, gin.H{"Token": tokenStr, "ExpiresAt": expiredTime.Unix()})
+		if affectedRows >= 1 { //Checks whether the amount of rows affected is greater / equal to 1.
+			c.JSON(200, gin.H{"success": true, "token": token, "expiresAt": expiredTime.Unix()})
+		}
+
 	} else {
-		c.JSON(401, gin.H{"Auth failed": loginData.Email})
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 	}
 }
 

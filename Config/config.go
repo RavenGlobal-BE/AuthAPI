@@ -3,7 +3,7 @@ package Config
 /* This config file includes are changeable settings. They're gonna be hardcoded on compile-time. */
 
 // Program configurations
-var Debug bool = false
+var TestMode bool = false
 var AllowVerbose bool = false
 
 // Version & Build

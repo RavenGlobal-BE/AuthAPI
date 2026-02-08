@@ -44,21 +44,21 @@ func GetQuery(query string, destination any, args ...any) error { //Gets data fr
 	}
 }
 
-func InsertQuery(query string, args ...any) (string, error) {
+func InsertQuery(query string, args ...any) (int64, error) { //Returns the number of affected rows
 	result, err := Db.Exec(query, args...)
 
 	if err != nil {
 		fmt.Println("Error executing insert query:", err)
-		return "", err
+		return 0, err
 	}
 
-	lastInsertID, err := result.LastInsertId()
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		fmt.Println("Error fetching last insert ID:", err)
-		return "", err
+		fmt.Println("Error fetching rows affected:", err)
+		return 0, err
 	}
 
-	return fmt.Sprintf("%d", lastInsertID), nil
+	return rowsAffected, nil
 }
 
 func ConnectDB(DBname string) {
