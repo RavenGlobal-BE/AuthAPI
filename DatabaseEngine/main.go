@@ -13,7 +13,7 @@ import (
 
 var Db *sql.DB // Database pointer -> Shared across the entire program
 
-func ExecuteQuery(query string, destination any, args ...any) error { //Gets data from the database tables
+func GetQuery(query string, destination any, args ...any) error { //Gets data from the database tables
 	switch v := destination.(type) {
 	case *Users:
 		err := Db.QueryRow(query, args...).Scan(
@@ -44,7 +44,7 @@ func ExecuteQuery(query string, destination any, args ...any) error { //Gets dat
 	}
 }
 
-func ExecuteQueryInsert(query string, args ...any) (string, error) {
+func InsertQuery(query string, args ...any) (string, error) {
 	result, err := Db.Exec(query, args...)
 
 	if err != nil {

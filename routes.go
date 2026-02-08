@@ -25,7 +25,7 @@ func handleLogin(c *gin.Context) {
 	}
 
 	var user = engine.Users{}
-	err = engine.ExecuteQuery("SELECT * FROM users WHERE email = ?", &user, loginData.Email)
+	err = engine.GetQuery("SELECT * FROM users WHERE email = ?", &user, loginData.Email)
 
 	result := auth.CheckPasswordHash(loginData.Password, user.Hashed_password)
 
@@ -41,7 +41,7 @@ func handleLogin(c *gin.Context) {
 		}
 
 		expiredTime := time.Now().AddDate(0, 0, 180)
-		tokenStr, err := engine.ExecuteQueryInsert("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
+		tokenStr, err := engine.InsertQuery("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
 
 		c.JSON(200, gin.H{"Token": tokenStr, "ExpiresAt": expiredTime.Unix()})
 	} else {
