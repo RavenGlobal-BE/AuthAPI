@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	engine "raven/auth/DatabaseEngine"
+	mailer "raven/auth/Mailer"
+
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +21,7 @@ func handleLogin(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&loginData)
 
-	mailValid := auth.EmailIsValid(loginData.Email)
+	mailValid := mailer.EmailIsValid(loginData.Email)
 	if mailValid == false {
 		c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
 		return
