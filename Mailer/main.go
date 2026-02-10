@@ -1,8 +1,8 @@
 package mailer
 
 import (
-	"io/ioutil"
 	"net/smtp"
+	"os"
 	"strings"
 )
 
@@ -14,7 +14,7 @@ func Send() {
 		"email-smtp.eu-north-1.amazonaws.com",
 	)
 
-	htmlBytes, err := ioutil.ReadFile("Mailer/mailVerificationTemplate.html")
+	htmlBytes, err := os.ReadFile("Mailer/mailVerificationTemplate.html")
 	if err != nil {
 		panic(err)
 	}
