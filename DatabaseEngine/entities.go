@@ -23,3 +23,15 @@ type Users struct { // Structure for the Accounts.Users table
 	SchdeletedDeletion *string
 	StripeCustomerID   *string // Optional field for Stripe customer ID
 }
+
+type MobileInfo struct {
+	Id             int16
+	Mcc            string
+	Mnc            string
+	OperatorName   string
+	TwoGShutdown   *string
+	ThreeGShutdown *string
+	LTEShutdown    *string
+	CountryCode    string
+	active         int
+}

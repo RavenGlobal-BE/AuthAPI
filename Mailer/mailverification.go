@@ -14,8 +14,7 @@ func EmailIsValid(email string) bool {
 		return false
 	}
 
-	lowerCasedEmail := strings.ToLower(addr.Address)
-	mailParts := strings.Split(lowerCasedEmail, "@")
+	mailParts := strings.Split(strings.ToLower(addr.Address), "@")
 
 	user, domain := mailParts[0], mailParts[1]
 

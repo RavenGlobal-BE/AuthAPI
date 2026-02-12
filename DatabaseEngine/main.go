@@ -3,12 +3,13 @@ package databaseengine
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	logging "raven/auth/Logging"
 
 	"github.com/go-sql-driver/mysql"
-	//"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
 var Db *sql.DB // Database pointer -> Shared across the entire program
@@ -87,5 +88,55 @@ func ConnectDB(DBname string) {
 }
 
 func prepareDB() { //Checks whether the database connection has the correct structure
-	Db.Query("CREATE TABLE IF NOT EXISTS sessions (token VARCHAR(255) PRIMARY KEY, user_id INT, created_at TIMESTAMP, expires_at TIMESTAMP)")
+	_, err := Db.Query("CREATE TABLE IF NOT EXISTS sessions (token VARCHAR(512) PRIMARY KEY, user_id INT, created_at TIMESTAMP, expires_at TIMESTAMP, refresh_token VARCHAR(512), refresh_expires_at TIMESTAMP)")
+	if err != nil {
+		logging.Log(err.Error(), logging.Fatal)
+	}
+}
+
+var DbPointer *sql.DB
+
+func PGConnect(destination any) {
+	dsn := "postgres://postgres:6464@localhost:5432/postgres?sslmode=disable"
+	db, err := sql.Open("postgres", dsn)
+
+	DbPointer = db
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func PGQuery(destination any) {
+	if DbPointer == nil {
+		logging.Log("Null pointer exception. Terminating the program now...", logging.Fatal)
+	}
+
+	row, err := DbPointer.Query("select * from mobileroaming.carrier_info where id = 12")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	switch v := destination.(type) {
+	case *MobileInfo:
+		if row.Next() {
+			err = row.Scan(
+				&v.Id,
+				&v.Mcc,
+				&v.Mnc,
+				&v.OperatorName,
+				&v.TwoGShutdown,
+				&v.ThreeGShutdown,
+				&v.LTEShutdown,
+				&v.CountryCode,
+				&v.active,
+			)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	default:
+		fmt.Println(destination)
+	}
 }

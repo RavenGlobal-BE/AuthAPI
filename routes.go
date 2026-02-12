@@ -13,13 +13,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Returns both a Bearer token & a refresh token
 func handleLogin(c *gin.Context) {
 	var loginData struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
-	err := c.ShouldBindJSON(&loginData)
+	err := c.ShouldBindJSON(&loginData) //Pointer value
 
 	mailValid := mailer.EmailIsValid(loginData.Email)
 	if mailValid == false {
@@ -38,17 +39,19 @@ func handleLogin(c *gin.Context) {
 	}
 
 	if result {
-		token, err := auth.GenerateToken()
+		token, err := auth.GenerateToken() //Generates a bearer token
 		if err != nil {
 			c.JSON(500, gin.H{"reason": "Internal error"})
 			return
 		}
 
+		//refresh, err := auth.GenerateToken() //Generates a refresh token
+
 		expiredTime := time.Now().AddDate(0, 0, 1) // 24 hours
 		affectedRows, err := engine.InsertQuery("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
 
 		if affectedRows >= 1 { //Checks whether the amount of rows affected is greater / equal to 1.
-			c.JSON(200, gin.H{"token": token, "expiresAt": expiredTime.Unix()})
+			c.JSON(200, gin.H{"token": token, "expiresAt": expiredTime.Unix(), "Refresh": "soon"})
 			return
 		}
 
@@ -59,6 +62,11 @@ func handleLogin(c *gin.Context) {
 	}
 }
 
+// Shows the user the current version of the API
 func handleAbout(c *gin.Context) {
 	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
+}
+
+func dbtest(c *gin.Context) {
+	c.JSON(200, gin.H{})
 }

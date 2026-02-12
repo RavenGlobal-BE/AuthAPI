@@ -3,6 +3,7 @@ package mailer
 import (
 	"net/smtp"
 	"os"
+	logger "raven/auth/Logging"
 	"strings"
 )
 
@@ -16,8 +17,10 @@ func Send() {
 
 	htmlBytes, err := os.ReadFile("Mailer/mailVerificationTemplate.html")
 	if err != nil {
-		panic(err)
+		logger.Log("Unable to read email template: "+err.Error(), logger.Error)
+		return
 	}
+
 	html := string(htmlBytes)
 
 	html = strings.ReplaceAll(html, "{name}", "Farshad")
@@ -44,6 +47,7 @@ func Send() {
 	)
 
 	if err != nil {
-		panic(err)
+		logger.Log("Unable to sign into AWS SES: "+err.Error(), logger.Error)
+		return
 	}
 }

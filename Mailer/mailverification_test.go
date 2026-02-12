@@ -9,7 +9,7 @@ func TestEmailIsValid(t *testing.T) {
 		"imad.amroug@outlook.com":     true,
 		"randomtext":                  false,
 		"imad@raven.co.com":           true,
-		"imad@Raven.co.com":           true,
+		"randomtext@.com":             false,
 	}
 
 	//Key    -> Email

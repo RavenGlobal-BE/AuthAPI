@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 	config "raven/auth/Config"
-	engine "raven/auth/DatabaseEngine"
+	databaseengine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
-	mailer "raven/auth/Mailer"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,11 +17,13 @@ func main() {
 	r.Use(gin.Recovery())
 
 	logging.Log("Connecting to server...", logging.Debug)
-	engine.ConnectDB("Accounts")
+	//engine.ConnectDB("Accounts")
+
+	mob := databaseengine.MobileInfo{}
+	databaseengine.PGQuery(&mob)
 
 	RegisterRoutes(r)
-
-	mailer.Send()
+	//mailer.Send()
 
 	logging.Log(fmt.Sprintf("Starting Raven ONE Auth on port %d...", config.Port), logging.Info)
 	if err := r.Run(fmt.Sprintf(":%d", config.Port)); err != nil {
@@ -33,4 +34,5 @@ func main() {
 func RegisterRoutes(router *gin.Engine) {
 	router.POST("/login", handleLogin)
 	router.GET("/about", handleAbout)
+	router.GET("/dbTest", dbtest)
 }
