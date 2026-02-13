@@ -68,5 +68,8 @@ func handleAbout(c *gin.Context) {
 }
 
 func dbtest(c *gin.Context) {
+	mob := engine.MobileInfo{}
+	engine.PGQuery(&mob)
+
 	c.JSON(200, gin.H{})
 }

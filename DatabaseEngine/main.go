@@ -6,9 +6,8 @@ import (
 	"log"
 	"time"
 
-	logging "raven/auth/Logging"
+	logger "raven/auth/Logging"
 
-	"github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
 
@@ -62,60 +61,48 @@ func InsertQuery(query string, args ...any) (int64, error) { //Returns the numbe
 	return rowsAffected, nil
 }
 
-func ConnectDB(DBname string) {
-	cfg := mysql.NewConfig()
-	cfg.User = "root"
-	cfg.Passwd = ""
-	cfg.Net = "tcp"
-	cfg.Addr = "127.0.0.1:3306"
-	cfg.DBName = DBname
-
-	var err error
-	Db, err = sql.Open("mysql", cfg.FormatDSN())
-	if err != nil {
-		logging.Log(err.Error(), logging.Fatal)
-	}
-
-	Db.SetMaxOpenConns(30)
-	Db.SetConnMaxIdleTime(5 * time.Minute)
-
-	pingErr := Db.Ping()
-	if pingErr != nil {
-		logging.Log("Database connection failed", logging.Fatal)
-	}
-
-	prepareDB()
-}
-
-func prepareDB() { //Checks whether the database connection has the correct structure
-	_, err := Db.Query("CREATE TABLE IF NOT EXISTS sessions (token VARCHAR(512) PRIMARY KEY, user_id INT, created_at TIMESTAMP, expires_at TIMESTAMP, refresh_token VARCHAR(512), refresh_expires_at TIMESTAMP)")
-	if err != nil {
-		logging.Log(err.Error(), logging.Fatal)
-	}
-}
-
 var DbPointer *sql.DB
 
-func PGConnect(destination any) {
+func PGConnect() error {
 	dsn := "postgres://postgres:6464@localhost:5432/postgres?sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 
 	DbPointer = db
 
+	DbPointer.SetMaxOpenConns(25)
+	DbPointer.SetMaxIdleConns(25)
+	DbPointer.SetConnMaxLifetime(5 * time.Minute)
+
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }
 
 func PGQuery(destination any) {
 	if DbPointer == nil {
-		logging.Log("Null pointer exception. Terminating the program now...", logging.Fatal)
+		logger.Log("Null pointer found. Reconnecting to DB...", logger.Error)
+		err := PGConnect()
+
+		if err != nil {
+			logger.Log(err.Error(), logger.Fatal)
+		} else {
+			logger.Log("DB connected successfully", logger.Pass)
+		}
 	}
 
 	row, err := DbPointer.Query("select * from mobileroaming.carrier_info where id = 12")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	defer func(row *sql.Rows) {
+		err := row.Close()
+		if err != nil {
+			logger.Log(err.Error(), logger.Error)
+		}
+	}(row)
 
 	switch v := destination.(type) {
 	case *MobileInfo:

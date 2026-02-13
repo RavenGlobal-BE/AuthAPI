@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	config "raven/auth/Config"
-	databaseengine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
 
 	"github.com/gin-gonic/gin"
@@ -13,14 +12,12 @@ func main() {
 	logging.Log("Starting Raven Auth Server...", logging.Debug)
 
 	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
+	//r := gin.Default() //Debugging
+	r := gin.New() //Production
 	r.Use(gin.Recovery())
 
 	logging.Log("Connecting to server...", logging.Debug)
 	//engine.ConnectDB("Accounts")
-
-	mob := databaseengine.MobileInfo{}
-	databaseengine.PGQuery(&mob)
 
 	RegisterRoutes(r)
 	//mailer.Send()
