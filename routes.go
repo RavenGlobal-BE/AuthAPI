@@ -5,8 +5,6 @@ import (
 
 	//auth "raven/auth/Authorization"
 	config "raven/auth/Config"
-	engine "raven/auth/DatabaseEngine"
-
 	//mailer "raven/auth/Mailer"
 
 	//"time"
@@ -68,9 +66,12 @@ func handleAbout(c *gin.Context) {
 	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
 }
 
-func dbtest(c *gin.Context) {
-	mob := engine.MobileInfo{}
-	//	engine.PGQuery(context.Background(), &mob)
+func (a *App) dbtest(c *gin.Context) {
+	user := a.Ur.GetAccountByEmail()
 
-	c.JSON(200, gin.H{"mobileInfo": mob})
+	if user == nil {
+		c.JSON(404, gin.H{"error": "user not found"})
+		return
+	}
+	c.JSON(200, gin.H{"user": user.Email})
 }

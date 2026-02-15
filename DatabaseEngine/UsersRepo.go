@@ -10,31 +10,24 @@ type Usersrepo struct {
 	db *DB
 }
 
-func (Ur Usersrepo) Init(db *DB) error {
-	err := Ur.SetupSchema(db)
+func NewUsersRepo(db *DB) *Usersrepo {
+	return &Usersrepo{db: db}
+}
 
-	err = Ur.SetupUsersTable(db)
+func (Ur *Usersrepo) Init() error {
+	err := Ur.SetupSchema()
 	if err != nil {
 		return err
 	}
-
-	if err != nil { //If an error happens, a 2nd attempt is made
-
-		err := Ur.SetupSchema(db)
-		if err != nil {
-			return err
-		}
-
-		err = Ur.SetupUsersTable(db)
-		if err != nil {
-			return err
-		}
+	err = Ur.SetupUsersTable()
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (Ur Usersrepo) SetupUsersTable(db *DB) error {
+func (Ur *Usersrepo) SetupUsersTable() error {
 	// This function checks wheter the table contains all the elements used in this API.
 	// If it doesn't, it creates the missing elements.
 
@@ -55,7 +48,7 @@ func (Ur Usersrepo) SetupUsersTable(db *DB) error {
     timeDeletion    TIMESTAMP                     -- optional
 	);`, schema, table)
 
-	_, err := db.pool.Exec(context.Background(), query)
+	_, err := Ur.db.pool.Exec(context.Background(), query)
 	if err != nil {
 		return err
 	}
@@ -63,23 +56,48 @@ func (Ur Usersrepo) SetupUsersTable(db *DB) error {
 	return nil
 }
 
-func (Ur Usersrepo) SetupSchema(db *DB) error {
+func (Ur *Usersrepo) SetupSchema() error {
 	schema := "accounts"
 
 	query := fmt.Sprintf(`CREATE SCHEMA IF NOT EXISTS %s;`, schema)
 
-	_, err := db.pool.Exec(context.Background(), query)
+	_, err := Ur.db.pool.Exec(context.Background(), query)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// It queries the users database based on the
+func (Ur *Usersrepo) GetAccountByEmail() *User {
+	var v = &User{} //creates an empty struct
+	row := Ur.db.pool.QueryRow(context.Background(), `select * from accounts.users where email = $1`, "imad@raven.co.com")
+	err := row.Scan(
+		&v.UserID,
+		&v.Email,
+		&v.Password,
+		&v.FirstName,
+		&v.LastName,
+		&v.PublicUsername,
+		&v.CountryCode,
+		&v.CreatedAt,
+		&v.IsDeleted,
+		&v.TimeDeletion,
+	)
+
+	if err != nil {
+		fmt.Println("Error scanning row: ", err)
+		return nil
+	}
+
+	return v
 }
 
 type User struct {
 	UserID         int32
 	Email          string
-	Password       string
+	Password       string // Bycrypted (cost 14)
 	FirstName      string
 	LastName       *string
 	PublicUsername *string

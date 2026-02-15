@@ -10,23 +10,30 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type App struct {
+	Ur *dbEngine.Usersrepo
+}
+
 func main() {
 	logging.Log("Starting Raven Auth Server...", logging.Debug)
+
+	gin.SetMode(gin.ReleaseMode)
+	//r := gin.Default() //Debugging
+	r := gin.New() //Production
+	r.Use(gin.Recovery())
 
 	db, err := dbEngine.NewDB(context.Background(), "postgres://postgres:6464@localhost:5432/postgres?sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
 
-	User := dbEngine.Usersrepo{}
-	_ = User.Init(db)
+	userRepo := dbEngine.NewUsersRepo(db)
 
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default() //Debugging
-	//r := gin.New() //Production
-	r.Use(gin.Recovery())
+	app := &App{
+		Ur: userRepo,
+	}
 
-	RegisterRoutes(r)
+	RegisterRoutes(r, app)
 	//mailer.Send()
 
 	logging.Log(fmt.Sprintf("Starting Raven ONE Auth on port %d...", config.Port), logging.Info)
@@ -35,8 +42,8 @@ func main() {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router *gin.Engine, app *App) {
 	router.POST("/login", handleLogin)
 	router.GET("/about", handleAbout)
-	router.GET("/dbTest", dbtest)
+	router.GET("/dbTest", app.dbtest)
 }
