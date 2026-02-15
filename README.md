@@ -14,6 +14,6 @@ This implementation also is backwards compatible with older Raven Auth versions 
 
 ## Minimum requirements
 - Currently supports ARM only. (x86 support coming soon)
-- An active MariaDB Database or (soon) a Postgres Database
+- An active Postgres & a Redis instance
 - 256MB of RAM available to be used
-- A Single-Core CPU should suffice
+- A single GPU should suffice

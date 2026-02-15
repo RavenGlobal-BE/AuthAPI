@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	config "raven/auth/Config"
+	dbEngine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
 
 	"github.com/gin-gonic/gin"
@@ -11,13 +13,18 @@ import (
 func main() {
 	logging.Log("Starting Raven Auth Server...", logging.Debug)
 
-	gin.SetMode(gin.ReleaseMode)
-	//r := gin.Default() //Debugging
-	r := gin.New() //Production
-	r.Use(gin.Recovery())
+	db, err := dbEngine.NewDB(context.Background(), "postgres://postgres:6464@localhost:5432/postgres?sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
 
-	logging.Log("Connecting to server...", logging.Debug)
-	//engine.ConnectDB("Accounts")
+	User := dbEngine.Usersrepo{}
+	_ = User.Init(db)
+
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default() //Debugging
+	//r := gin.New() //Production
+	r.Use(gin.Recovery())
 
 	RegisterRoutes(r)
 	//mailer.Send()
