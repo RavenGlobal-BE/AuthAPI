@@ -27,9 +27,6 @@ func main() {
 	r.Use(gin.Recovery())
 
 	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://postgres:6464@localhost:5432/prod?sslmode=disable"
-	}
 
 	db, err := dbEngine.NewDB(context.Background(), dbURL)
 	if err != nil {
