@@ -8,6 +8,8 @@ import (
 	logging "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
 
+	"os"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,7 +35,7 @@ func main() {
 
 	app := &App{
 		Ur: userRepo,
-		ms: mailer.NewSmtpService(),
+		ms: mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
 	}
 
 	RegisterRoutes(r, app)

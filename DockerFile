@@ -1,0 +1,6 @@
+FROM golang:1.25
+WORKDIR /app
+COPY . .
+RUN go build .
+EXPOSE 3000
+CMD ["./auth"]

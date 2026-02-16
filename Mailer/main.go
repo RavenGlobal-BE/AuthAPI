@@ -11,12 +11,12 @@ type MailService struct {
 	smtpAuth *smtp.Auth
 }
 
-func NewSmtpService() *MailService {
+func NewSmtpService(username string, password string, host string) *MailService {
 	auth := smtp.PlainAuth(
 		"",
-		"", //Username
-		"", //Password
-		"email-smtp.eu-north-1.amazonaws.com",
+		username, //Username
+		password, //Password
+		host,     //Host
 	)
 
 	return &MailService{
