@@ -73,5 +73,5 @@ func (a *App) dbtest(c *gin.Context) {
 		c.JSON(404, gin.H{"error": "user not found"})
 		return
 	}
-	c.JSON(200, gin.H{"user": user.Email})
+	c.JSON(200, gin.H{"user": &user})
 }

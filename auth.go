@@ -26,12 +26,25 @@ func main() {
 	r := gin.New() //Production
 	r.Use(gin.Recovery())
 
-	db, err := dbEngine.NewDB(context.Background(), "postgres://postgres:6464@localhost:5432/postgres?sslmode=disable")
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://postgres:6464@localhost:5432/prod?sslmode=disable"
+	}
+
+	db, err := dbEngine.NewDB(context.Background(), dbURL)
 	if err != nil {
 		panic(err)
 	}
 
 	userRepo := dbEngine.NewUsersRepo(db)
+	err = userRepo.SetupSchema()
+	if err != nil {
+		panic(err)
+	}
+	err = userRepo.SetupUsersTable()
+	if err != nil {
+		panic(err)
+	}
 
 	app := &App{
 		Ur: userRepo,

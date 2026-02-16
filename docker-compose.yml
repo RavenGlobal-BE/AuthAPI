@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 6464
+      POSTGRES_DB: prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  auth:
+    build:
+      context: .
+      dockerfile: DockerFile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgres://postgres:6464@postgres:5432/prod?sslmode=disable
+
+volumes:
+  postgres_data:
