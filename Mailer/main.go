@@ -7,14 +7,24 @@ import (
 	"strings"
 )
 
-func Send() {
-	var auth = smtp.PlainAuth(
+type MailService struct {
+	smtpAuth *smtp.Auth
+}
+
+func NewSmtpService() *MailService {
+	auth := smtp.PlainAuth(
 		"",
 		"", //Username
 		"", //Password
 		"email-smtp.eu-north-1.amazonaws.com",
 	)
 
+	return &MailService{
+		smtpAuth: &auth,
+	}
+}
+
+func (ms *MailService) Send() {
 	htmlBytes, err := os.ReadFile("Mailer/mailVerificationTemplate.html")
 	if err != nil {
 		logger.Log("Unable to read email template: "+err.Error(), logger.Error)
@@ -40,7 +50,7 @@ func Send() {
 
 	err = smtp.SendMail(
 		"email-smtp.eu-north-1.amazonaws.com:587",
-		auth,
+		*ms.smtpAuth,
 		"no-reply@raven.co.com",
 		[]string{to},
 		message,

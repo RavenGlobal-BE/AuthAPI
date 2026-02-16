@@ -6,12 +6,14 @@ import (
 	config "raven/auth/Config"
 	dbEngine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
+	mailer "raven/auth/Mailer"
 
 	"github.com/gin-gonic/gin"
 )
 
 type App struct {
 	Ur *dbEngine.Usersrepo
+	ms *mailer.MailService
 }
 
 func main() {
@@ -31,10 +33,10 @@ func main() {
 
 	app := &App{
 		Ur: userRepo,
+		ms: mailer.NewSmtpService(),
 	}
 
 	RegisterRoutes(r, app)
-	//mailer.Send()
 
 	logging.Log(fmt.Sprintf("Starting Raven ONE Auth on port %d...", config.Port), logging.Info)
 	if err := r.Run(fmt.Sprintf(":%d", config.Port)); err != nil {
