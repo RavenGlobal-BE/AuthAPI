@@ -2,6 +2,7 @@ package mailer
 
 import (
 	"net/mail"
+	"regexp"
 	"strings"
 )
 
@@ -9,13 +10,15 @@ import (
 
 // Tests an email for basic validity
 func EmailIsValid(email string) bool {
+	email = strings.TrimSpace(email)
 	addr, err := mail.ParseAddress(email)
-	if err != nil {
+	match, _ := regexp.MatchString("[a-z]", addr.Address)
+
+	if err != nil || !match || addr.Address != email {
 		return false
 	}
 
 	mailParts := strings.Split(strings.ToLower(addr.Address), "@")
-
 	user, domain := mailParts[0], mailParts[1]
 
 	switch domain {

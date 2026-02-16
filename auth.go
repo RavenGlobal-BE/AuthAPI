@@ -60,7 +60,7 @@ func main() {
 }
 
 func RegisterRoutes(router *gin.Engine, app *App) {
-	router.POST("/login", handleLogin)
+	router.POST("/login", app.handleLogin)
 	router.GET("/about", handleAbout)
 	router.GET("/dbTest", app.dbtest)
 }

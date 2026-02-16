@@ -70,28 +70,32 @@ func (Ur *Usersrepo) SetupSchema() error {
 }
 
 // It queries the users database based on the
-func (Ur *Usersrepo) GetAccountByEmail() *User {
-	var v = &User{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select * from accounts.users where email = $1`, "imad@raven.co.com")
+func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
+	var v = &UserAuth{} //creates an empty struct
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, created_at, is_deleted from accounts.users where email = $1`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
-		&v.LastName,
-		&v.PublicUsername,
-		&v.CountryCode,
 		&v.CreatedAt,
 		&v.IsDeleted,
-		&v.TimeDeletion,
 	)
 
 	if err != nil {
-		fmt.Println("Error scanning row: ", err)
 		return nil
 	}
 
 	return v
+}
+
+type UserAuth struct {
+	UserID    int32
+	Email     string
+	Password  string // Bycrypted (cost 14)
+	FirstName string
+	CreatedAt time.Time
+	IsDeleted int16
 }
 
 type User struct {

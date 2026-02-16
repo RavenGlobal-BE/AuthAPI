@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	//auth "raven/auth/Authorization"
+	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
-	//mailer "raven/auth/Mailer"
+	mailer "raven/auth/Mailer"
 
 	//"time"
 
@@ -13,52 +13,40 @@ import (
 )
 
 // Returns both a Bearer token & a refresh token
-func handleLogin(c *gin.Context) {
-	// var loginData struct {
-	// 	Email    string `json:"email"`
-	// 	Password string `json:"password"`
-	// }
+func (a *App) handleLogin(c *gin.Context) {
+	var loginData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
-	// err := c.ShouldBindJSON(&loginData) //Pointer value
+	err := c.ShouldBindJSON(&loginData) //Pointer value
+	if err != nil {
+		c.JSON(400, gin.H{"success": false, "reason": "Invalid request body"})
+		return
+	}
 
-	// mailValid := mailer.EmailIsValid(loginData.Email)
-	// if mailValid == false {
-	// 	c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
-	// 	return
-	// }
+	mailValid := mailer.EmailIsValid(loginData.Email)
+	if mailValid == false {
+		c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
+		return
+	}
 
-	// var user = engine.Users{}
-	// err = engine.GetQuery("SELECT * FROM users WHERE email = ?", &user, loginData.Email)
+	user := a.Ur.GetAccountByEmail(loginData.Email)
 
-	// result := auth.CheckPasswordHash(loginData.Password, user.Hashed_password)
+	if user == nil {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
+	}
 
-	// if err != nil {
-	// 	c.JSON(500, gin.H{"reason": err.Error()})
-	// 	return
-	// }
+	result := auth.CheckPasswordHash(loginData.Password, user.Password)
 
-	// if result {
-	// 	token, err := auth.GenerateToken() //Generates a bearer token
-	// 	if err != nil {
-	// 		c.JSON(500, gin.H{"reason": "Internal error"})
-	// 		return
-	// 	}
+	if result == false {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
+	}
 
-	// 	//refresh, err := auth.GenerateToken() //Generates a refresh token
+	c.JSON(200, gin.H{"success": true})
 
-	// 	expiredTime := time.Now().AddDate(0, 0, 1) // 24 hours
-	// 	affectedRows, err := engine.InsertQuery("INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)", *token, user.Id, time.Now().Format("2006-01-02 15:04:05"), expiredTime.Format("2006-01-02 15:04:05"))
-
-	// 	if affectedRows >= 1 { //Checks whether the amount of rows affected is greater / equal to 1.
-	// 		c.JSON(200, gin.H{"token": token, "expiresAt": expiredTime.Unix(), "Refresh": "soon"})
-	// 		return
-	// 	}
-
-	// 	c.JSON(500, gin.H{"reason": "Internal error"})
-
-	// } else {
-	// 	c.JSON(401, gin.H{"reason": "Invalid credentials"})
-	// }
 }
 
 // Shows the user the current version of the API
@@ -67,7 +55,7 @@ func handleAbout(c *gin.Context) {
 }
 
 func (a *App) dbtest(c *gin.Context) {
-	user := a.Ur.GetAccountByEmail()
+	user := a.Ur.GetAccountByEmail("imad@raven.co.com")
 
 	if user == nil {
 		c.JSON(404, gin.H{"error": "user not found"})
