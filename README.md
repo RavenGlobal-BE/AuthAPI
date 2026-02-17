@@ -17,3 +17,11 @@ This implementation also is backwards compatible with older Raven Auth versions 
 - An active Postgres & a Redis instance
 - 256MB of RAM available to be used
 - A single GPU should suffice
+
+## .env configuration
+```
+MailServer="mailserver"
+MailUser=""
+MailPassword=""
+DATABASE_URL=""
+```

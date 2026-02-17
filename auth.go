@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	dbEngine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
@@ -11,6 +12,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 type App struct {
@@ -21,12 +23,21 @@ type App struct {
 func main() {
 	logging.Log("Starting Raven Auth Server...", logging.Debug)
 
+	//generateKeyPair()
+
+	if err := godotenv.Load(); err != nil {
+		logging.Log("Warning: .env file not found", logging.Warning)
+	}
+
 	gin.SetMode(gin.ReleaseMode)
 	//r := gin.Default() //Debugging
 	r := gin.New() //Production
 	r.Use(gin.Recovery())
 
 	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		dbURL = "postgres://postgres:6464@localhost:5432/prod?sslmode=disable"
+	}
 
 	db, err := dbEngine.NewDB(context.Background(), dbURL)
 	if err != nil {
@@ -59,5 +70,5 @@ func main() {
 func RegisterRoutes(router *gin.Engine, app *App) {
 	router.POST("/login", app.handleLogin)
 	router.GET("/about", handleAbout)
-	router.GET("/dbTest", app.dbtest)
+	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
 }

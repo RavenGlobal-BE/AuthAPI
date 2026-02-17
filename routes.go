@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	mailer "raven/auth/Mailer"
@@ -19,7 +18,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		Password string `json:"password"`
 	}
 
-	err := c.ShouldBindJSON(&loginData) //Pointer value
+	err := c.ShouldBindJSON(&loginData)
 	if err != nil {
 		c.JSON(400, gin.H{"success": false, "reason": "Invalid request body"})
 		return
@@ -32,20 +31,36 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	user := a.Ur.GetAccountByEmail(loginData.Email)
-
 	if user == nil {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
 	}
 
 	result := auth.CheckPasswordHash(loginData.Password, user.Password)
-
 	if result == false {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
 	}
 
-	c.JSON(200, gin.H{"success": true})
+	// Generate JWT tokens
+	accessToken, err := auth.GenerateAccessToken(user.UserID, user.Email, user.FirstName)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate access token"})
+		return
+	}
+
+	refreshToken, err := auth.GenerateRefreshToken(user.UserID, user.Email)
+	if err != nil {
+		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate refresh token"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"success":       true,
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"token_type":    "Bearer",
+	})
 
 }
 
