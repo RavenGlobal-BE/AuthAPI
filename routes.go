@@ -4,9 +4,12 @@ import (
 	"fmt"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
+	dbEngine "raven/auth/DatabaseEngine"
 	mailer "raven/auth/Mailer"
 
 	//"time"
+
+	"context"
 
 	"github.com/gin-gonic/gin"
 )
@@ -54,6 +57,14 @@ func (a *App) handleLogin(c *gin.Context) {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate refresh token"})
 		return
 	}
+
+	redis := dbEngine.ConnectRedis()
+	sessionData := map[string]interface{}{
+		"refresh_token": refreshToken,
+		"user_id":       user.UserID,
+		"type":          "std",
+	}
+	dbEngine.SetInRedis(redis, context.Background(), sessionData)
 
 	c.JSON(200, gin.H{
 		"success":       true,

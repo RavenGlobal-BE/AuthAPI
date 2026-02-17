@@ -33,7 +33,6 @@ func GenerateToken() (*string, error) {
 
 	return &hashedToken, nil
 }
-
 func CreateKeyPairs() (string, string, error) {
 	token, err := GenerateToken()
 	if err != nil {
