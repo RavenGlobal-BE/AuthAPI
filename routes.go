@@ -59,7 +59,7 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	redis := dbEngine.ConnectRedis()
-	sessionData := map[string]interface{}{
+	sessionData := map[string]interface{}{ //Data that will be saved in Redis.
 		"refresh_token": refreshToken,
 		"user_id":       user.UserID,
 		"type":          "std",
@@ -75,17 +75,23 @@ func (a *App) handleLogin(c *gin.Context) {
 
 }
 
-// Shows the user the current version of the API
-func handleAbout(c *gin.Context) {
-	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
-}
+func (a *App) dbtest(c *gin.Context) { //Tests user authentication
+	userID, exists := c.Get("user_id")
+	if exists != true {
+		c.JSON(400, gin.H{"error": "user_id not found in context"})
+		return
+	}
 
-func (a *App) dbtest(c *gin.Context) {
-	user := a.Ur.GetAccountByEmail("imad@raven.co.com")
+	user := a.Ur.GetAccountById(int(userID.(int32)))
 
 	if user == nil {
 		c.JSON(404, gin.H{"error": "user not found"})
 		return
 	}
 	c.JSON(200, gin.H{"user": &user})
+}
+
+// Shows the user the current version of the API
+func handleAbout(c *gin.Context) {
+	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
 }

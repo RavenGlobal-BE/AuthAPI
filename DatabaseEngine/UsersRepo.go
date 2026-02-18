@@ -89,6 +89,26 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	return v
 }
 
+// It queries the users database based on the
+func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
+	var v = &UserAuth{} //creates an empty struct
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, created_at, is_deleted from accounts.users where user_id = $1`, id)
+	err := row.Scan(
+		&v.UserID,
+		&v.Email,
+		&v.Password,
+		&v.FirstName,
+		&v.CreatedAt,
+		&v.IsDeleted,
+	)
+
+	if err != nil {
+		return nil
+	}
+
+	return v
+}
+
 type UserAuth struct {
 	UserID    int32
 	Email     string
