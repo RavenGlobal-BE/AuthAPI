@@ -24,7 +24,7 @@ func SetupRedisSchema(client *redis.Client, ctx context.Context) error { //Struc
 	return nil
 }
 
-func SetInRedis(client *redis.Client, ctx context.Context, structure map[string]interface{}) bool {
+func SetInRedis(client *redis.Client, ctx context.Context, structure map[string]interface{}, expiry time.Duration) bool {
 	hash := sha256.New()
 	hash.Write([]byte(structure["refresh_token"].(string)))
 
@@ -35,7 +35,7 @@ func SetInRedis(client *redis.Client, ctx context.Context, structure map[string]
 		return false
 	}
 
-	err = client.Expire(ctx, hashedToken, 24*time.Hour).Err()
+	err = client.Expire(ctx, hashedToken, expiry).Err()
 	if err != nil {
 		return false
 	}
