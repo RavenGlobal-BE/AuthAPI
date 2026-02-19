@@ -15,7 +15,7 @@ type JWTPayload struct {
 	UserID    int32  `json:"user_id"`
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
-	TokenType string `json:"token_type"` // "access" or "refresh"
+	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
 

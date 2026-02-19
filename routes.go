@@ -1,15 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	dbEngine "raven/auth/DatabaseEngine"
 	mailer "raven/auth/Mailer"
-
 	"time"
-
-	"context"
 
 	"github.com/gin-gonic/gin"
 )
