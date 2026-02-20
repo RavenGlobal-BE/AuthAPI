@@ -12,7 +12,6 @@ import (
 )
 
 type JWTPayload struct {
-	UserID    int32  `json:"user_id"`
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 	TokenType string `json:"token_type"`
@@ -47,6 +46,11 @@ func getPublicKey() (ed25519.PublicKey, error) {
 func GenerateAccessToken(userID int32, email, firstName string) (string, error) {
 	expirationTime := time.Now().Add(15 * time.Minute)
 
+	tokenID, err := GenerateToken()
+	if err != nil {
+		return "", err
+	}
+
 	payload := &JWTPayload{
 		Email:     email,
 		FirstName: firstName,
@@ -55,9 +59,10 @@ func GenerateAccessToken(userID int32, email, firstName string) (string, error) 
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
+			ID:        *tokenID,
 			Issuer:    "https://auth.raven.co.com",
 			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
-			Audience:  jwt.ClaimStrings{"Raven-Originals"},
+			Audience:  jwt.ClaimStrings{"Raven-Original"},
 		},
 	}
 
@@ -83,6 +88,11 @@ func GenerateAccessToken(userID int32, email, firstName string) (string, error) 
 func GenerateRefreshToken(userID int32, email string) (string, error) {
 	expirationTime := time.Now().Add(14 * 24 * time.Hour)
 
+	tokenID, err := GenerateToken()
+	if err != nil {
+		return "", err
+	}
+
 	payload := &JWTPayload{
 		Email:     email,
 		TokenType: "refresh",
@@ -90,6 +100,7 @@ func GenerateRefreshToken(userID int32, email string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
+			ID:        *tokenID,
 			Issuer:    "https://auth.raven.co.com",
 			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
 			Audience:  jwt.ClaimStrings{"Raven-Originals"},
@@ -127,6 +138,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
+
 		return publicKey, nil
 	})
 

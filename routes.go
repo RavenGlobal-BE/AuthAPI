@@ -75,12 +75,15 @@ func (a *App) handleLogin(c *gin.Context) {
 
 func (a *App) dbtest(c *gin.Context) { //Tests user authentication
 	userID, exists := c.Get("user_id")
+
 	if exists != true {
 		c.JSON(400, gin.H{"error": "user_id not found in context"})
 		return
 	}
 
-	user := a.Ur.GetAccountById(int(userID.(int32)))
+	fmt.Printf("User ID from context: %v\n", userID)
+
+	user := a.Ur.GetAccountById(userID.(int))
 
 	if user == nil {
 		c.JSON(404, gin.H{"error": "user not found"})

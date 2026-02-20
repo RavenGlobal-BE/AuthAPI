@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +24,9 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_id", payload.UserID)
+		userID, err := strconv.Atoi(payload.RegisteredClaims.Subject)
+
+		c.Set("user_id", userID)
 		c.Set("email", payload.Email)
 		c.Next()
 	}
