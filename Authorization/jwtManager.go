@@ -103,7 +103,7 @@ func GenerateRefreshToken(userID int32, email string) (string, error) {
 			ID:        *tokenID,
 			Issuer:    "https://auth.raven.co.com",
 			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
-			Audience:  jwt.ClaimStrings{"Raven-Originals"},
+			Audience:  jwt.ClaimStrings{"Raven-Original"},
 		},
 	}
 
