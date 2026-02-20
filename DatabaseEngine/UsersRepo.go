@@ -112,7 +112,7 @@ func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 type UserAuth struct {
 	UserID    int32
 	Email     string
-	Password  string // Bycrypted (cost 14)
+	Password  string // Bycrypted (cost 12)
 	FirstName string
 	CreatedAt time.Time
 	IsDeleted int16
@@ -121,7 +121,7 @@ type UserAuth struct {
 type User struct {
 	UserID         int32
 	Email          string
-	Password       string // Bycrypted (cost 14)
+	Password       string // Bycrypted (cost 12)
 	FirstName      string
 	LastName       *string
 	PublicUsername *string

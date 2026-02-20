@@ -10,6 +10,10 @@ import (
 
 // Tests an email for basic validity
 func EmailIsValid(email string) bool {
+	if email == "" {
+		return false
+	}
+
 	email = strings.TrimSpace(email)
 	addr, err := mail.ParseAddress(email)
 	match, _ := regexp.MatchString("[a-z]", addr.Address)

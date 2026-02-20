@@ -65,6 +65,8 @@ func main() {
 	if err := r.Run(fmt.Sprintf(":%d", config.Port)); err != nil {
 		logging.Log(err.Error(), logging.Fatal)
 	}
+
+	db.Close() //Database closes when the server is shutting down.
 }
 
 func RegisterRoutes(router *gin.Engine, app *App) {

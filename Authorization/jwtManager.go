@@ -134,9 +134,16 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 	}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		// Verify signing method
-		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok { // Verifying the signing method is correct
 			return nil, errors.New("unexpected signing method")
+		}
+
+		if claims.Issuer != "https://auth.raven.co.com" { // Verifying whether the issuer truely comes from Raven.
+			return nil, errors.New("invalid token issuer")
+		}
+
+		if claims.Audience == nil || claims.Audience[0] != "Raven-Original" { // Check whether the token is really meant for "Raven Original" services.
+			return nil, errors.New("invalid token audience")
 		}
 
 		return publicKey, nil
