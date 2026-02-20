@@ -48,7 +48,6 @@ func GenerateAccessToken(userID int32, email, firstName string) (string, error) 
 	expirationTime := time.Now().Add(15 * time.Minute)
 
 	payload := &JWTPayload{
-		UserID:    userID,
 		Email:     email,
 		FirstName: firstName,
 		TokenType: "access",
@@ -56,6 +55,9 @@ func GenerateAccessToken(userID int32, email, firstName string) (string, error) 
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "https://auth.raven.co.com",
+			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
+			Audience:  jwt.ClaimStrings{"Raven-Originals"},
 		},
 	}
 
@@ -82,13 +84,15 @@ func GenerateRefreshToken(userID int32, email string) (string, error) {
 	expirationTime := time.Now().Add(14 * 24 * time.Hour)
 
 	payload := &JWTPayload{
-		UserID:    userID,
 		Email:     email,
 		TokenType: "refresh",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "https://auth.raven.co.com",
+			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
+			Audience:  jwt.ClaimStrings{"Raven-Originals"},
 		},
 	}
 
