@@ -48,7 +48,7 @@ func main() {
 		panic(err)
 	}
 
-	redisDataStore := dbEngine.CreateRedisClient("", "", 0)
+	redisDataStore := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 0)
 	userRedis := dbEngine.NewTokenRepo(redisDataStore)
 
 	app := &App{

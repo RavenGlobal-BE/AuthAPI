@@ -20,8 +20,17 @@ This implementation also is backwards compatible with older Raven Auth versions 
 
 ## .env configuration
 ```
-MailServer="mailserver"
+MailServer=""
 MailUser=""
 MailPassword=""
 DATABASE_URL=""
+
+# JWT configuration
+JWT_PRIVATE_KEY="" #Make sure this one is long enough
+JWT_PUBLIC_KEY=""
+
+# Redis Configuration
+RedisHost=""
+RedisPort=""
+RedisPassword=""
 ```
