@@ -16,8 +16,9 @@ import (
 )
 
 type App struct {
-	Ur *dbEngine.Usersrepo
-	ms *mailer.MailService
+	Ur        *dbEngine.Usersrepo
+	ms        *mailer.MailService
+	userRedis *dbEngine.TokenRepo
 }
 
 func main() {
@@ -34,29 +35,26 @@ func main() {
 	r := gin.New() //Production
 	r.Use(gin.Recovery())
 
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://postgres:6464@localhost:5432/prod?sslmode=disable"
-	}
-
-	db, err := dbEngine.NewDB(context.Background(), dbURL)
+	db, err := dbEngine.NewDB(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		panic(err)
 	}
 
 	userRepo := dbEngine.NewUsersRepo(db)
 	err = userRepo.SetupSchema()
-	if err != nil {
-		panic(err)
-	}
 	err = userRepo.SetupUsersTable()
+
 	if err != nil {
 		panic(err)
 	}
 
+	redisDataStore := dbEngine.CreateRedisClient("", "", 0)
+	userRedis := dbEngine.NewTokenRepo(redisDataStore)
+
 	app := &App{
-		Ur: userRepo,
-		ms: mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
+		Ur:        userRepo,
+		ms:        mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
+		userRedis: userRedis,
 	}
 
 	RegisterRoutes(r, app)
@@ -73,4 +71,5 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.POST("/login", app.handleLogin)
 	router.GET("/about", handleAbout)
 	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
+	router.POST("/refresh", app.handleRefresh)
 }

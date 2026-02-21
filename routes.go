@@ -37,6 +37,11 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	if user.IsDeleted == 1 {
+		c.JSON(403, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
+	}
+
 	result := auth.CheckPasswordHash(loginData.Password, user.Password)
 	if result == false {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
@@ -71,6 +76,26 @@ func (a *App) handleLogin(c *gin.Context) {
 		"token_type":    "Bearer",
 	})
 
+}
+
+func (a *App) handleRefresh(c *gin.Context) {
+	var requestData struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	err := c.ShouldBindJSON(&requestData)
+	if err != nil {
+		c.JSON(400, gin.H{"success": false, "reason": "Invalid refresh token"})
+		return
+	}
+
+	payload, err := auth.ValidateToken(requestData.RefreshToken)
+	if err != nil {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid refresh token"})
+		return
+	}
+
+	fmt.Println(payload)
 }
 
 func (a *App) dbtest(c *gin.Context) { //Tests user authentication
