@@ -49,7 +49,7 @@ func (ms *MailService) Send() {
 		htmlBody)
 
 	err = smtp.SendMail(
-		"email-smtp.eu-north-1.amazonaws.com:587",
+		os.Getenv("MailServer"),
 		*ms.smtpAuth,
 		"no-reply@raven.co.com",
 		[]string{to},

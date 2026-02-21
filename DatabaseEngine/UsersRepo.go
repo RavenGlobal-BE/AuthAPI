@@ -37,7 +37,7 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s.%s (
     user_id         SERIAL PRIMARY KEY,          -- auto-incrementable key
-    email           VARCHAR(255) NOT NULL,
+    email           VARCHAR(255) UNIQUE NOT NULL,
     password        VARCHAR(255) NOT NULL,
     first_name      VARCHAR(255) NOT NULL,
     last_name       VARCHAR(255),                -- optional (NULL allowed)
@@ -45,7 +45,7 @@ func (Ur *Usersrepo) SetupUsersTable() error {
     countryCode     VARCHAR(5) NOT NULL,
     created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     is_deleted      SMALLINT NOT NULL DEFAULT 0,
-    timeDeletion    TIMESTAMP                     -- optional
+    timeDeletion    TIMESTAMP                    -- optional
 	);`, schema, table)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
