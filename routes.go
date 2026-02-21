@@ -5,7 +5,6 @@ import (
 	"fmt"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
-	dbEngine "raven/auth/DatabaseEngine"
 	mailer "raven/auth/Mailer"
 	"time"
 
@@ -61,13 +60,13 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
-	redis := dbEngine.ConnectRedis()
 	sessionData := map[string]interface{}{ //Data that will be saved in Redis.
 		"refresh_token": refreshToken,
 		"user_id":       user.UserID,
 		"blacklisted":   false,
 	}
-	dbEngine.SetInRedis(redis, context.Background(), sessionData, 24*time.Hour) //Saves the refresh token in Redis with an expiry of 7 days
+
+	a.userRedis.InsertToken(context.Background(), sessionData, 24*time.Hour) //Saves the refresh token in Redis with an expiry of 7 days
 
 	c.JSON(200, gin.H{
 		"success":       true,
