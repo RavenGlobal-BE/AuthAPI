@@ -28,6 +28,7 @@ DATABASE_URL=""
 # JWT configuration
 JWT_PRIVATE_KEY="" #Make sure this one is long enough
 JWT_PUBLIC_KEY=""
+JWT_ISSUER="https://auth.raven.co.com"
 
 # Redis Configuration
 RedisHost=""

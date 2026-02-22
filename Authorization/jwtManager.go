@@ -60,7 +60,7 @@ func GenerateJWTToken(userID int32, email string, firstName string, lastName str
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			ID:        *tokenID,
-			Issuer:    "https://auth.raven.co.com",
+			Issuer:    os.Getenv("JWT_ISSUER"),
 			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
 			Audience:  jwt.ClaimStrings{"Raven-Original"},
 		},
@@ -97,7 +97,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 			return nil, errors.New("unexpected signing method")
 		}
 
-		if claims.Issuer != "https://auth.raven.co.com" { // Verifying whether the issuer truely comes from Raven.
+		if claims.Issuer != os.Getenv("JWT_ISSUER") { // Verifying whether the issuer truely comes from Raven.
 			return nil, errors.New("invalid token issuer")
 		}
 
