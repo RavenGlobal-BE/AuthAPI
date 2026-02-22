@@ -72,12 +72,13 @@ func (Ur *Usersrepo) SetupSchema() error {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, created_at, is_deleted from accounts.users where email = $1`, mail)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, created_at, is_deleted from accounts.users where email = $1`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
+		&v.LastName,
 		&v.CreatedAt,
 		&v.IsDeleted,
 	)
@@ -92,12 +93,13 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, created_at, is_deleted from accounts.users where user_id = $1`, id)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, created_at, is_deleted from accounts.users where user_id = $1`, id)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
+		&v.LastName,
 		&v.CreatedAt,
 		&v.IsDeleted,
 	)
@@ -114,6 +116,7 @@ type UserAuth struct {
 	Email     string
 	Password  string // Bycrypted (cost 12)
 	FirstName string
+	LastName  string
 	CreatedAt time.Time
 	IsDeleted int16
 }

@@ -14,6 +14,7 @@ import (
 type JWTPayload struct {
 	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }
@@ -43,9 +44,7 @@ func getPublicKey() (ed25519.PublicKey, error) {
 	return ed25519.PublicKey(keyBytes), nil
 }
 
-func GenerateAccessToken(userID int32, email, firstName string) (string, error) {
-	expirationTime := time.Now().Add(15 * time.Minute)
-
+func GenerateJWTToken(userID int32, email string, firstName string, lastName string, access string, expiration time.Time) (string, error) {
 	tokenID, err := GenerateToken()
 	if err != nil {
 		return "", err
@@ -54,50 +53,10 @@ func GenerateAccessToken(userID int32, email, firstName string) (string, error) 
 	payload := &JWTPayload{
 		Email:     email,
 		FirstName: firstName,
-		TokenType: "access",
+		LastName:  lastName,
+		TokenType: access, // "access" of "refresh"
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
-			ID:        *tokenID,
-			Issuer:    "https://auth.raven.co.com",
-			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
-			Audience:  jwt.ClaimStrings{"Raven-Original"},
-		},
-	}
-
-	privateKey, err := getPrivateKey()
-	if err != nil {
-		fmt.Println(err)
-
-		return "", err
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, payload)
-	tokenString, err := token.SignedString(privateKey)
-	if err != nil {
-		fmt.Println(err)
-
-		return "", err
-	}
-
-	return tokenString, nil
-}
-
-// Creates a refresh token that lasts 14 days
-func GenerateRefreshToken(userID int32, email string) (string, error) {
-	expirationTime := time.Now().Add(14 * 24 * time.Hour)
-
-	tokenID, err := GenerateToken()
-	if err != nil {
-		return "", err
-	}
-
-	payload := &JWTPayload{
-		Email:     email,
-		TokenType: "refresh",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			ExpiresAt: jwt.NewNumericDate(expiration),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			ID:        *tokenID,

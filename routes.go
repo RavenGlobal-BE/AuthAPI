@@ -31,13 +31,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	user := a.Ur.GetAccountByEmail(loginData.Email)
-	if user == nil {
+	if user == nil || user.IsDeleted == 1 {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
-		return
-	}
-
-	if user.IsDeleted == 1 {
-		c.JSON(403, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
 	}
 
@@ -48,13 +43,9 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	// Generate JWT tokens
-	accessToken, err := auth.GenerateAccessToken(user.UserID, user.Email, user.FirstName)
-	if err != nil {
-		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate access token"})
-		return
-	}
 
-	refreshToken, err := auth.GenerateRefreshToken(user.UserID, user.Email)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute))
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour))
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate refresh token"})
 		return
@@ -104,8 +95,6 @@ func (a *App) dbtest(c *gin.Context) { //Tests user authentication
 		c.JSON(400, gin.H{"error": "user_id not found in context"})
 		return
 	}
-
-	fmt.Printf("User ID from context: %v\n", userID)
 
 	user := a.Ur.GetAccountById(userID.(int))
 

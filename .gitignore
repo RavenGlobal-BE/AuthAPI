@@ -33,3 +33,6 @@ go.work.sum
 
 # Executable file
 auth
+
+# macOS specific files
+.DS_Store
