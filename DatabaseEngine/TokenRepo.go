@@ -35,3 +35,17 @@ func (tr *TokenRepo) InsertToken(ctx context.Context, structure map[string]inter
 
 	return true
 }
+
+func (tr *TokenRepo) GetTokenInfo(ctx context.Context, refreshToken string) (map[string]string, error) {
+	hash := sha256.New()
+	hash.Write([]byte(refreshToken))
+
+	hashedToken := hex.EncodeToString(hash.Sum(nil))
+
+	result, err := tr.redis.client.HGetAll(ctx, hashedToken).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

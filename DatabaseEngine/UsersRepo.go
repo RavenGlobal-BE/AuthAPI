@@ -45,7 +45,30 @@ func (Ur *Usersrepo) SetupUsersTable() error {
     countryCode     VARCHAR(5) NOT NULL,
     created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     is_deleted      SMALLINT NOT NULL DEFAULT 0,
+	is_verified     SMALLINT NOT NULL DEFAULT 0,
     timeDeletion    TIMESTAMP                    -- optional
+	);`, schema, table)
+
+	_, err := Ur.db.pool.Exec(context.Background(), query)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (Ur *Usersrepo) SetupCompanyIntegration() error {
+	// This function checks wheter the table contains all the elements used in this API.
+	// If it doesn't, it creates the missing elements.
+
+	schema := "accounts"
+	table := "apps"
+
+	query := fmt.Sprintf(`
+	CREATE TABLE IF NOT EXISTS %s.%s (
+    user_id         SERIAL PRIMARY KEY,          -- auto-incrementable key
+    app_name        VARCHAR(255) UNIQUE NOT NULL,
+    company         VARCHAR(255) NOT NULL,
 	);`, schema, table)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
