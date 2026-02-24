@@ -6,6 +6,12 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+/*
+Redis databases and it's uses:
+   0: Session data for users
+   1: Rate limiting data
+*/
+
 type RedisClient struct {
 	client *redis.Client
 }

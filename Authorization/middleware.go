@@ -1,9 +1,12 @@
 package authorization
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	dbEngine "raven/auth/DatabaseEngine"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +35,30 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		c.Set("user_id", userID)
 		c.Set("email", payload.Email)
+		c.Next()
+	}
+}
+
+func RateLimiting(rr *dbEngine.RateRepo) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		clientIP := c.ClientIP()
+		limit, err := rr.CheckLimit(c.Request.Context(), clientIP)
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
+			return
+		}
+
+		if limit >= 15 {
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
+			return
+		}
+
+		newLimit, err := rr.Increment(c.Request.Context(), clientIP, 15*(60*time.Second))
+
+		c.Header("X-RateLimit-Limit", "15")
+		c.Header("X-RateLimit-Remaining", fmt.Sprintf("%d", 15-newLimit))
+
 		c.Next()
 	}
 }

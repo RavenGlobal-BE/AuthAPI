@@ -19,6 +19,7 @@ type App struct {
 	Ur        *dbEngine.Usersrepo
 	ms        *mailer.MailService
 	userRedis *dbEngine.TokenRepo
+	rateLimit *dbEngine.RateRepo
 }
 
 func main() {
@@ -51,10 +52,14 @@ func main() {
 	redisDataStore := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 0)
 	userRedis := dbEngine.NewTokenRepo(redisDataStore)
 
+	rateLimitRedis := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 1)
+	rateRepo := dbEngine.NewRateRepo(rateLimitRedis)
+
 	app := &App{
 		Ur:        userRepo,
 		ms:        mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
 		userRedis: userRedis,
+		rateLimit: rateRepo,
 	}
 
 	RegisterRoutes(r, app)
@@ -68,7 +73,7 @@ func main() {
 }
 
 func RegisterRoutes(router *gin.Engine, app *App) {
-	router.POST("/login", app.handleLogin)
+	router.POST("/login", auth.RateLimiting(app.rateLimit), app.handleLogin)
 	router.GET("/about", handleAbout)
 	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
 	router.POST("/refresh", app.handleRefresh)
