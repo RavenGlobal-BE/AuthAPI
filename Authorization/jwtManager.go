@@ -8,6 +8,8 @@ import (
 	"os"
 	"time"
 
+	logger "raven/auth/Logging"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -67,14 +69,16 @@ func GenerateJWTToken(userID int32, email string, firstName string, lastName str
 
 	privateKey, err := getPrivateKey()
 	if err != nil {
-		fmt.Println(err)
+		errorMsg := fmt.Sprintf(err.Error())
+		logger.Log(errorMsg, logger.Error)
 		return "", err
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, payload)
 	tokenString, err := token.SignedString(privateKey)
 	if err != nil {
-		fmt.Println(err)
+		errorMsg := fmt.Sprintf(err.Error())
+		logger.Log(errorMsg, logger.Error)
 		return "", err
 	}
 
@@ -87,7 +91,8 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 
 	publicKey, err := getPublicKey()
 	if err != nil {
-		fmt.Println(err)
+		errorMsg := fmt.Sprintf(err.Error())
+		logger.Log(errorMsg, logger.Error)
 		return nil, err
 	}
 
@@ -108,7 +113,8 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 	})
 
 	if err != nil {
-		fmt.Println(err)
+		errorMsg := fmt.Sprintf(err.Error())
+		logger.Log(errorMsg, logger.Error)
 		return nil, err
 	}
 

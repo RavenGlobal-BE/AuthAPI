@@ -16,7 +16,7 @@ import (
 )
 
 type App struct {
-	Ur        *dbEngine.Usersrepo
+	ur        *dbEngine.Usersrepo
 	ms        *mailer.MailService
 	userRedis *dbEngine.TokenRepo
 	rateLimit *dbEngine.RateRepo
@@ -41,6 +41,8 @@ func main() {
 		panic(err)
 	}
 
+	defer db.Close() //Database closes when the server is shutting down.
+
 	userRepo := dbEngine.NewUsersRepo(db)
 	err = userRepo.SetupSchema()
 	err = userRepo.SetupUsersTable()
@@ -56,7 +58,7 @@ func main() {
 	rateRepo := dbEngine.NewRateRepo(rateLimitRedis)
 
 	app := &App{
-		Ur:        userRepo,
+		ur:        userRepo,
 		ms:        mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
 		userRedis: userRedis,
 		rateLimit: rateRepo,
@@ -69,7 +71,6 @@ func main() {
 		logging.Log(err.Error(), logging.Fatal)
 	}
 
-	db.Close() //Database closes when the server is shutting down.
 }
 
 func RegisterRoutes(router *gin.Engine, app *App) {
@@ -77,4 +78,5 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.GET("/about", handleAbout)
 	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
 	router.POST("/refresh", app.handleRefresh)
+	router.POST("/introspect", introspect)
 }

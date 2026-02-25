@@ -30,7 +30,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
-	user := a.Ur.GetAccountByEmail(loginData.Email)
+	user := a.ur.GetAccountByEmail(loginData.Email)
 	if user == nil || user.IsDeleted == 1 {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
@@ -96,7 +96,7 @@ func (a *App) dbtest(c *gin.Context) { //Tests user authentication
 		return
 	}
 
-	user := a.Ur.GetAccountById(userID.(int))
+	user := a.ur.GetAccountById(userID.(int))
 
 	if user == nil {
 		c.JSON(404, gin.H{"error": "user not found"})
@@ -108,4 +108,8 @@ func (a *App) dbtest(c *gin.Context) { //Tests user authentication
 // Shows the user the current version of the API
 func handleAbout(c *gin.Context) {
 	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
+}
+
+func introspect(c *gin.Context) {
+	c.JSON(200, gin.H{"message": "Placeholder for token introspection endpoint"})
 }
