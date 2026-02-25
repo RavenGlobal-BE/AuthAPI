@@ -44,10 +44,10 @@ func main() {
 	defer db.Close() //Database closes when the server is shutting down.
 
 	userRepo := dbEngine.NewUsersRepo(db)
-	err = userRepo.SetupSchema()
-	err = userRepo.SetupUsersTable()
-
-	if err != nil {
+	if err = userRepo.SetupSchema(); err != nil {
+		panic(err)
+	}
+	if err = userRepo.SetupUsersTable(); err != nil {
 		panic(err)
 	}
 
@@ -79,4 +79,8 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
 	router.POST("/refresh", app.handleRefresh)
 	router.POST("/introspect", introspect)
+
+	//Well known routes
+	router.GET("/.well-known/jwks.json", JWTKeys)
+	router.GET("/.well-known/openid-configuration", OpenIDConfig)
 }

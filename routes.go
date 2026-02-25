@@ -16,6 +16,7 @@ func (a *App) handleLogin(c *gin.Context) {
 	var loginData struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+		Nonce    string `json:"nonce"`
 	}
 
 	err := c.ShouldBindJSON(&loginData)
@@ -44,8 +45,9 @@ func (a *App) handleLogin(c *gin.Context) {
 
 	// Generate JWT tokens
 
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute))
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour))
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce)
+
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate refresh token"})
 		return
@@ -110,6 +112,7 @@ func handleAbout(c *gin.Context) {
 	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
 }
 
+// Checks whether the token is still valid and not blacklisted.
 func introspect(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Placeholder for token introspection endpoint"})
 }

@@ -18,6 +18,7 @@ type JWTPayload struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	TokenType string `json:"token_type"`
+	Nonce     string `json:"nonce,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -45,7 +46,7 @@ func getPublicKey() (ed25519.PublicKey, error) {
 	return ed25519.PublicKey(keyBytes), nil
 }
 
-func GenerateJWTToken(userID int32, email string, firstName string, lastName string, access string, expiration time.Time) (string, error) {
+func GenerateJWTToken(userID int32, email string, firstName string, lastName string, access string, expiration time.Time, nonce string) (string, error) {
 	tokenID, err := GenerateToken()
 	if err != nil {
 		return "", err
@@ -56,6 +57,7 @@ func GenerateJWTToken(userID int32, email string, firstName string, lastName str
 		FirstName: firstName,
 		LastName:  lastName,
 		TokenType: access, // "access" of "refresh"
+		Nonce:     nonce,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiration),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
