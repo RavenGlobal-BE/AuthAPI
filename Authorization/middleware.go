@@ -42,8 +42,15 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 func RateLimiting(rr *dbEngine.RateRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
-		limit, err := rr.CheckLimit(c.Request.Context(), clientIP)
+		if clientIP == "::1" || clientIP == "127.0.0.1" {
+			c.Header("X-RateLimit-Limit", "Unlimited")
+			c.Header("X-RateLimit-Remaining", "Unlimited")
 
+			c.Next()
+			return
+		}
+
+		limit, err := rr.CheckLimit(c.Request.Context(), clientIP)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
 			return

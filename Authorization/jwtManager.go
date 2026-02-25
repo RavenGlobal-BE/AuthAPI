@@ -19,7 +19,6 @@ type JWTPayload struct {
 	jwt.RegisteredClaims
 }
 
-// Both getPrivateKey() & getPublicKey() use the Ed25519 algorithm to create the keys
 func getPrivateKey() (ed25519.PrivateKey, error) {
 	keyStr := os.Getenv("JWT_PRIVATE_KEY")
 	if keyStr == "" {

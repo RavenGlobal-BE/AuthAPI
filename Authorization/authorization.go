@@ -3,19 +3,51 @@ package authorization
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
+	"strings"
 
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/argon2"
+)
+
+const (
+	argonTime    = 1
+	argonMemory  = 16 * 1024 // 16 MB
+	argonThreads = 1
+	argonKeyLen  = 32
+	argonSaltLen = 16
 )
 
 func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 12) // Chose 12 to have a balance of security & performance.
-	return string(bytes), err
+	salt := make([]byte, argonSaltLen)
+	if _, err := rand.Read(salt); err != nil {
+		return "", err
+	}
+	hash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, argonKeyLen)
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
+	return "$argon2id$" + b64Salt + "$" + b64Hash, nil
 }
 
-func CheckPasswordHash(password string, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
+func CheckPasswordHash(password string, encodedHash string) bool {
+	if len(encodedHash) < 10 || !strings.HasPrefix(encodedHash, "$argon2id$") {
+		return false
+	}
+	parts := strings.Split(encodedHash, "$")
+	if len(parts) != 4 {
+		return false
+	}
+	salt, err := base64.RawStdEncoding.DecodeString(parts[2])
+	if err != nil {
+		return false
+	}
+	hash, err := base64.RawStdEncoding.DecodeString(parts[3])
+	if err != nil {
+		return false
+	}
+	testHash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, uint32(len(hash)))
+	return subtle.ConstantTimeCompare(hash, testHash) == 1
 }
 
 func GenerateToken() (*string, error) {
