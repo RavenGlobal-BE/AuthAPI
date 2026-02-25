@@ -11,10 +11,12 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+// Optimized for our OVH Container.
+// Specs: 8 vCPU, 24GB of RAM -> Unlike bcrypt, argon2 is memory hungry.
 const (
-	argonTime    = 1
-	argonMemory  = 16 * 1024 // 16 MB
-	argonThreads = 1
+	argonTime    = 3
+	argonMemory  = 48 * 1024 // 48 MB
+	argonThreads = 2
 	argonKeyLen  = 32
 	argonSaltLen = 16
 )
