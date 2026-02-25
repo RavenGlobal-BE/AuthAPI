@@ -69,16 +69,14 @@ func GenerateJWTToken(userID int32, email string, firstName string, lastName str
 
 	privateKey, err := getPrivateKey()
 	if err != nil {
-		errorMsg := fmt.Sprintf(err.Error())
-		logger.Log(errorMsg, logger.Error)
+		logger.Log(err.Error(), logger.Error)
 		return "", err
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, payload)
 	tokenString, err := token.SignedString(privateKey)
 	if err != nil {
-		errorMsg := fmt.Sprintf(err.Error())
-		logger.Log(errorMsg, logger.Error)
+		logger.Log(err.Error(), logger.Error)
 		return "", err
 	}
 
@@ -91,8 +89,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 
 	publicKey, err := getPublicKey()
 	if err != nil {
-		errorMsg := fmt.Sprintf(err.Error())
-		logger.Log(errorMsg, logger.Error)
+		logger.Log(err.Error(), logger.Error)
 		return nil, err
 	}
 
@@ -113,8 +110,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 	})
 
 	if err != nil {
-		errorMsg := fmt.Sprintf(err.Error())
-		logger.Log(errorMsg, logger.Error)
+		logger.Log(err.Error(), logger.Error)
 		return nil, err
 	}
 
