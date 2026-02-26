@@ -15,6 +15,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+/* SUPPORT FOR PASSKEYS & MFA ARE COMING IN AUTH v2.1 */
+
 type App struct {
 	ur        *dbEngine.Usersrepo
 	ms        *mailer.MailService
@@ -77,8 +79,10 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.POST("/login", auth.RateLimiting(app.rateLimit), app.handleLogin)
 	router.GET("/about", handleAbout)
 	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
-	router.POST("/refresh", app.handleRefresh)
+
+	//Checks whether the token is still valid.
 	router.POST("/introspect", introspect)
+	router.GET("/authorize", authorize)
 
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)

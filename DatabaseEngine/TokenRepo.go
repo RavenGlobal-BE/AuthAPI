@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"time"
 )
 
@@ -46,6 +47,37 @@ func (tr *TokenRepo) GetTokenInfo(ctx context.Context, refreshToken string) (map
 	if err != nil {
 		return nil, err
 	}
+
+	return result, nil
+}
+
+// Stores an auth code in Redis with a 60s TTL.
+// Key format: auth_code:<code>
+func (tr *TokenRepo) InsertAuthCode(ctx context.Context, code string, data map[string]interface{}) error {
+	key := "auth_code:" + code
+
+	if err := tr.redis.client.HSet(ctx, key, data).Err(); err != nil {
+		return err
+	}
+
+	return tr.redis.client.Expire(ctx, key, 60*time.Second).Err()
+}
+
+// Reads and immediately deletes an auth code from Redis (single-use).
+// Returns an error if the code doesn't exist or has already expired.
+func (tr *TokenRepo) UseAuthCode(ctx context.Context, code string) (map[string]string, error) {
+	key := "auth_code:" + code
+
+	result, err := tr.redis.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 {
+		return nil, errors.New("auth code not found or expired")
+	}
+
+	tr.redis.client.Del(ctx, key)
 
 	return result, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	mailer "raven/auth/Mailer"
@@ -59,7 +60,10 @@ func (a *App) handleLogin(c *gin.Context) {
 		"blacklisted":   false,
 	}
 
-	a.userRedis.InsertToken(context.Background(), sessionData, 24*time.Hour) //Saves the refresh token in Redis with an expiry of 7 days
+	a.userRedis.InsertToken(context.Background(), sessionData, 14*24*time.Hour) //Saves the refresh token in Redis with an expiry of 14 days
+
+	c.SetCookie("access_token", accessToken, 900, "/", "", true, true)           // 15 min
+	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", true, true) // 14 days
 
 	c.JSON(200, gin.H{
 		"success":       true,
@@ -115,4 +119,40 @@ func handleAbout(c *gin.Context) {
 // Checks whether the token is still valid and not blacklisted.
 func introspect(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Placeholder for token introspection endpoint"})
+}
+
+// OIDC GET /authorize endpoint
+// Checks whether the user is authenticated (and still has a valid tokenwa).
+func authorize(c *gin.Context) {
+	clientID := c.Query("client_id")
+	redirectURI := c.Query("redirect_uri")
+	responseType := c.Query("response_type")
+	scope := c.Query("scope")
+	state := c.Query("state")
+	nonce := c.Query("nonce")
+
+	if clientID == "" || redirectURI == "" || responseType != "code" || scope == "" || state == "" || nonce == "" {
+		c.JSON(400, gin.H{"error": "Invalid Request"})
+		return
+	}
+
+	loginURL := fmt.Sprintf("/login?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
+		url.QueryEscape(clientID),
+		url.QueryEscape(redirectURI),
+		url.QueryEscape(responseType),
+		url.QueryEscape(scope),
+		url.QueryEscape(state),
+		url.QueryEscape(nonce),
+	)
+
+	//var userID string
+
+	accessCookie, err := c.Cookie("access_token")
+	if err != nil || accessCookie == "" {
+		c.Redirect(302, loginURL)
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Cookie works!"})
+	fmt.Println(accessCookie)
 }
