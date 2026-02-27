@@ -7,6 +7,7 @@ import (
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	mailer "raven/auth/Mailer"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -122,8 +123,8 @@ func introspect(c *gin.Context) {
 }
 
 // OIDC GET /authorize endpoint
-// Checks whether the user is authenticated (and still has a valid tokenwa).
-func authorize(c *gin.Context) {
+// Checks whether the user is authenticated (and still has a valid token).
+func (a *App) authorize(c *gin.Context) {
 	clientID := c.Query("client_id")
 	redirectURI := c.Query("redirect_uri")
 	responseType := c.Query("response_type")
@@ -136,7 +137,7 @@ func authorize(c *gin.Context) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("/login?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
+	loginURL := fmt.Sprintf("https://auth.raven.co.com/login?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
 		url.QueryEscape(clientID),
 		url.QueryEscape(redirectURI),
 		url.QueryEscape(responseType),
@@ -145,14 +146,92 @@ func authorize(c *gin.Context) {
 		url.QueryEscape(nonce),
 	)
 
-	//var userID string
+	accessCookie, _ := c.Cookie("access_token")
+	refreshCookie, _ := c.Cookie("refresh_token")
 
-	accessCookie, err := c.Cookie("access_token")
-	if err != nil || accessCookie == "" {
+	// If neither cookie exists, send to login immediately
+	if accessCookie == "" && refreshCookie == "" {
 		c.Redirect(302, loginURL)
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Cookie works!"})
-	fmt.Println(accessCookie)
+	var userID string
+
+	// Validate the access token
+	cookieDetails, err := auth.ValidateToken(accessCookie)
+	if err != nil || cookieDetails.ExpiresAt.Before(time.Now()) || cookieDetails.TokenType != "access" {
+		// Access token invalid or expired — try the refresh token
+		if refreshCookie == "" {
+			c.SetCookie("access_token", "", -1, "/", "", true, true)
+			c.Redirect(302, loginURL)
+			return
+		}
+
+		refreshClaims, refreshErr := auth.ValidateToken(refreshCookie)
+		if refreshErr != nil || refreshClaims.TokenType != "refresh" {
+			c.SetCookie("access_token", "", -1, "/", "", true, true)
+			c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+			c.Redirect(302, loginURL)
+			return
+		}
+
+		// Check Redis: token must exist and not be blacklisted
+		tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), refreshCookie)
+		if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "true" {
+			c.SetCookie("access_token", "", -1, "/", "", true, true)
+			c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+			c.Redirect(302, loginURL)
+			return
+		}
+
+		// Re-issue the access token silently
+		parsedID, parseErr := strconv.ParseInt(refreshClaims.Subject, 10, 32)
+		if parseErr != nil {
+			c.JSON(500, gin.H{"error": "Server error"})
+			return
+		}
+
+		newAccessToken, tokenErr := auth.GenerateJWTToken(
+			int32(parsedID),
+			refreshClaims.Email,
+			refreshClaims.FirstName,
+			refreshClaims.LastName,
+			"access",
+			time.Now().Add(15*time.Minute),
+			nonce,
+		)
+		if tokenErr != nil {
+			c.JSON(500, gin.H{"error": "Server error"})
+			return
+		}
+
+		c.SetCookie("access_token", newAccessToken, 900, "/", "", true, true)
+		userID = tokenData["user_id"]
+	} else {
+		userID = cookieDetails.Subject
+	}
+
+	// Generate auth code and store in Redis with 60s TTL
+	code, codeErr := auth.GenerateToken()
+	if codeErr != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	authCodeData := map[string]interface{}{
+		"user_id":      userID,
+		"client_id":    clientID,
+		"redirect_uri": redirectURI,
+		"nonce":        nonce,
+		"scope":        scope,
+	}
+
+	if err := a.userRedis.InsertAuthCode(context.Background(), *code, authCodeData); err != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	// Redirect back to the third-party app with the auth code
+	redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
+	c.Redirect(302, redirect)
 }

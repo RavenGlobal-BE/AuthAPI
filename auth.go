@@ -82,7 +82,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 
 	//Checks whether the token is still valid.
 	router.POST("/introspect", introspect)
-	router.GET("/authorize", authorize)
+	router.GET("/authorize", app.authorize)
 
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)
