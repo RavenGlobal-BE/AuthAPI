@@ -222,7 +222,7 @@ func (a *App) authorize(c *gin.Context) {
 
 		// Check Redis: token must exist and not be blacklisted
 		tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), refreshCookie)
-		if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "true" {
+		if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
 			c.SetCookie("access_token", "", -1, "/", "", true, true)
 			c.SetCookie("refresh_token", "", -1, "/", "", true, true)
 			c.Redirect(302, loginURL)

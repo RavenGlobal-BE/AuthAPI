@@ -91,7 +91,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 
 	publicKey, err := getPublicKey()
 	if err != nil {
-		logger.Log(err.Error(), logger.Error)
+		logger.Log(err.Error(), logger.Debug)
 		return nil, err
 	}
 
@@ -112,7 +112,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 	})
 
 	if err != nil {
-		logger.Log(err.Error(), logger.Error)
+		logger.Log(err.Error(), logger.Debug)
 		return nil, err
 	}
 

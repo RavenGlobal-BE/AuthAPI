@@ -32,8 +32,14 @@ func JWTKeys(c *gin.Context) {
 
 func OpenIDConfig(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"issuer":                                "https://auth.raven.com",
-		"jwks_uri":                              "https://auth.raven.com/.well-known/jwks.json",
+		"issuer":                                "https://auth.raven.co.com",
+		"jwks_uri":                              "https://auth.raven.co.com/.well-known/jwks.json",
 		"id_token_signing_alg_values_supported": []string{"EdDSA"},
+		"response_types_supported":              []string{"code"},
+		"scopes_supported":                      []string{"openid", "profile", "email"},
+		"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
+		"authorization_endpoint":                "https://auth.raven.co.com/authorize",
+		"token_endpoint":                        "https://auth.raven.co.com/token",
+		"introspection_endpoint":                "https://auth.raven.co.com/introspect",
 	})
 }

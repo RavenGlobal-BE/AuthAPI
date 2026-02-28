@@ -21,6 +21,10 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		payload, err := ValidateToken(tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			return
+		}
 
 		if payload.TokenType != "access" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
