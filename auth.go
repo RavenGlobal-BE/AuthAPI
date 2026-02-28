@@ -80,6 +80,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.POST("/introspect", app.introspect)
 	router.GET("/authorize", app.authorize)
 	router.POST("/token", app.token)
+	router.POST("/refresh", app.refresh)
 
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)

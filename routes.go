@@ -167,6 +167,59 @@ func (a *App) token(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Placeholder for token endpoint"})
 }
 
+func (a *App) refresh(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
+		c.JSON(400, gin.H{"error": "invalid_request"})
+		return
+	}
+
+	// Validate the refresh token JWT
+	claims, err := auth.ValidateToken(req.RefreshToken)
+	if err != nil || claims.TokenType != "refresh" {
+		c.JSON(401, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	// Check Redis: token must exist and not be blacklisted
+	tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), req.RefreshToken)
+	if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
+		c.JSON(401, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	// Parse user ID from claims
+	parsedID, parseErr := strconv.ParseInt(claims.Subject, 10, 32)
+	if parseErr != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	// Issue a new access token
+	newAccessToken, tokenErr := auth.GenerateJWTToken(
+		int32(parsedID),
+		claims.Email,
+		claims.FirstName,
+		claims.LastName,
+		"access",
+		time.Now().Add(15*time.Minute),
+		claims.Nonce,
+	)
+	if tokenErr != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"access_token": newAccessToken,
+		"token_type":   "Bearer",
+		"expires_in":   900,
+	})
+}
+
 // OIDC GET /authorize endpoint
 // Checks whether the user is authenticated (and still has a valid token).
 func (a *App) authorize(c *gin.Context) {

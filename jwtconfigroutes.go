@@ -41,5 +41,8 @@ func OpenIDConfig(c *gin.Context) {
 		"authorization_endpoint":                "https://auth.raven.co.com/authorize",
 		"token_endpoint":                        "https://auth.raven.co.com/token",
 		"introspection_endpoint":                "https://auth.raven.co.com/introspect",
+		"subject_types_supported":               []string{"public"},
+		"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
+		"claims_supported":                      []string{"sub", "email", "given_name", "family_name", "iat", "exp"},
 	})
 }
