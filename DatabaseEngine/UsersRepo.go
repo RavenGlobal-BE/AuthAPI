@@ -3,6 +3,7 @@ package databaseengine
 import (
 	"context"
 	"fmt"
+	logger "raven/auth/Logging"
 	"time"
 )
 
@@ -20,6 +21,11 @@ func (Ur *Usersrepo) Init() error {
 		return err
 	}
 	err = Ur.SetupUsersTable()
+	if err != nil {
+		return err
+	}
+
+	err = Ur.SetupCompanyIntegration()
 	if err != nil {
 		return err
 	}
@@ -66,15 +72,22 @@ func (Ur *Usersrepo) SetupCompanyIntegration() error {
 
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s.%s (
-    user_id         SERIAL PRIMARY KEY,          -- auto-incrementable key
-    app_name        VARCHAR(255) UNIQUE NOT NULL,
-    company         VARCHAR(255) NOT NULL,
+		app_id        SERIAL PRIMARY KEY,
+		client_id     VARCHAR(255) UNIQUE NOT NULL,
+		client_secret VARCHAR(255) NOT NULL,
+		app_name      VARCHAR(255) NOT NULL,
+		company       VARCHAR(255) NOT NULL,
+		redirect_uri  VARCHAR(255) NOT NULL,
+		active        BOOLEAN NOT NULL DEFAULT true,
+		created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 	);`, schema, table)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
 	if err != nil {
 		return err
 	}
+
+	logger.Log("3rdParty Apps added", logger.Info)
 
 	return nil
 }

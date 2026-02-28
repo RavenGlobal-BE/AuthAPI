@@ -18,9 +18,9 @@ func NewTokenRepo(db *RedisClient) *TokenRepo {
 	return &TokenRepo{redis: db}
 }
 
-func (tr *TokenRepo) InsertToken(ctx context.Context, structure map[string]interface{}, expiry time.Duration) bool {
+func (tr *TokenRepo) InsertToken(ctx context.Context, key string, structure map[string]interface{}, expiry time.Duration) bool {
 	hash := sha256.New()
-	hash.Write([]byte(structure["refresh_token"].(string)))
+	hash.Write([]byte(key))
 
 	hashedToken := hex.EncodeToString(hash.Sum(nil))
 
@@ -35,6 +35,27 @@ func (tr *TokenRepo) InsertToken(ctx context.Context, structure map[string]inter
 	}
 
 	return true
+}
+
+// Blacklists the refresh token
+func (tr *TokenRepo) BlacklistToken(ctx context.Context, key string) bool {
+	hash := sha256.New()
+	hash.Write([]byte(key))
+	hashedToken := hex.EncodeToString(hash.Sum(nil))
+
+	current, err := tr.redis.client.HGet(ctx, hashedToken, "blacklisted").Result()
+	if err != nil {
+		return false // token doesn't exist
+	}
+
+	var newValue string
+	if current == "0" {
+		newValue = "1"
+	} else {
+		newValue = "0"
+	}
+
+	return tr.redis.client.HSet(ctx, hashedToken, "blacklisted", newValue).Err() == nil
 }
 
 func (tr *TokenRepo) GetTokenInfo(ctx context.Context, refreshToken string) (map[string]string, error) {
@@ -52,7 +73,6 @@ func (tr *TokenRepo) GetTokenInfo(ctx context.Context, refreshToken string) (map
 }
 
 // Stores an auth code in Redis with a 60s TTL.
-// Key format: auth_code:<code>
 func (tr *TokenRepo) InsertAuthCode(ctx context.Context, code string, data map[string]interface{}) error {
 	key := "auth_code:" + code
 
@@ -65,7 +85,7 @@ func (tr *TokenRepo) InsertAuthCode(ctx context.Context, code string, data map[s
 
 // Reads and immediately deletes an auth code from Redis (single-use).
 // Returns an error if the code doesn't exist or has already expired.
-func (tr *TokenRepo) UseAuthCode(ctx context.Context, code string) (map[string]string, error) {
+func (tr *TokenRepo) GetAuthCode(ctx context.Context, code string) (map[string]string, error) {
 	key := "auth_code:" + code
 
 	result, err := tr.redis.client.HGetAll(ctx, key).Result()
@@ -80,4 +100,15 @@ func (tr *TokenRepo) UseAuthCode(ctx context.Context, code string) (map[string]s
 	tr.redis.client.Del(ctx, key)
 
 	return result, nil
+}
+
+// Adds a token's jti to the revocation blocklist (access token).
+func (tr *TokenRepo) RevokeToken(ctx context.Context, jti string, ttl time.Duration) error {
+	return tr.redis.client.Set(ctx, "revoked:"+jti, "1", ttl).Err()
+}
+
+// Returns true if the token's jti has been revoked.
+func (tr *TokenRepo) IsRevoked(ctx context.Context, jti string) bool {
+	result, _ := tr.redis.client.Exists(ctx, "revoked:"+jti).Result()
+	return result > 0
 }

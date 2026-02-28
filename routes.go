@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	mailer "raven/auth/Mailer"
@@ -46,7 +47,6 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	// Generate JWT tokens
-
 	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce)
 	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce)
 
@@ -56,12 +56,12 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	sessionData := map[string]interface{}{ //Data that will be saved in Redis.
-		"refresh_token": refreshToken,
-		"user_id":       user.UserID,
-		"blacklisted":   false,
+		"user_id":     user.UserID,
+		"blacklisted": false,
+		"access":      accessToken,
 	}
 
-	a.userRedis.InsertToken(context.Background(), sessionData, 14*24*time.Hour) //Saves the refresh token in Redis with an expiry of 14 days
+	a.userRedis.InsertToken(context.Background(), refreshToken, sessionData, 14*24*time.Hour) //Saves the refresh token in Redis with an expiry of 14 days
 
 	c.SetCookie("access_token", accessToken, 900, "/", "", true, true)           // 15 min
 	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", true, true) // 14 days
@@ -118,8 +118,53 @@ func handleAbout(c *gin.Context) {
 }
 
 // Checks whether the token is still valid and not blacklisted.
-func introspect(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Placeholder for token introspection endpoint"})
+func (a *App) introspect(c *gin.Context) {
+	var data struct {
+		AccessToken string `json:"token"`
+	}
+
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	claims, err := auth.ValidateToken(data.AccessToken)
+	if err != nil {
+		c.JSON(200, gin.H{"active": false}) // RFC 7662
+		return
+	}
+
+	if a.userRedis.IsRevoked(context.Background(), claims.ID) {
+		c.JSON(200, gin.H{"active": false})
+		return
+	}
+	c.JSON(200, gin.H{
+		"active":     true,
+		"sub":        claims.Subject,
+		"exp":        claims.ExpiresAt.Unix(),
+		"token_type": claims.TokenType,
+	})
+
+}
+
+func (a *App) token(c *gin.Context) {
+	code := c.PostForm("code")
+	clientID := c.PostForm("client_id")
+	clientSecret := c.PostForm("client_secret")
+	redirectURI := c.PostForm("redirect_uri")
+
+	if code == "" || clientID == "" || clientSecret == "" || redirectURI == "" {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	if clientID != os.Getenv("CLIENT_ID") || clientSecret != os.Getenv("CLIENT_SECRET") {
+		c.JSON(401, gin.H{"error": "Invalid client"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Placeholder for token endpoint"})
 }
 
 // OIDC GET /authorize endpoint

@@ -32,6 +32,11 @@ func HashPassword(password string) (string, error) {
 	return "$argon2id$" + b64Salt + "$" + b64Hash, nil
 }
 
+func SHA256Hash(input string) string {
+	hash := sha256.Sum256([]byte(input))
+	return hex.EncodeToString(hash[:])
+}
+
 func CheckPasswordHash(password string, encodedHash string) bool {
 	if len(encodedHash) < 10 || !strings.HasPrefix(encodedHash, "$argon2id$") {
 		return false
