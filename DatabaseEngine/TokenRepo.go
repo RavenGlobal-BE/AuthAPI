@@ -83,6 +83,12 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 	return result, nil
 }
 
+// InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
+func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, data map[string]interface{}, ttl time.Duration) {
+	tr.redis.client.HSet(ctx, sessionID, data)
+	tr.redis.client.Expire(ctx, sessionID, ttl)
+}
+
 // Deletes a refresh token from Redis (used during rotation).
 func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
 	hash := sha256.New()

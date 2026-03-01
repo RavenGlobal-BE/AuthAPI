@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"net/url"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
+	logger "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
 	"strconv"
 	"time"
@@ -60,14 +60,19 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
-	// Generate refresh token first to compute session ID
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, "")
+	// Generate sessionID first — embedded in both tokens, used as the Redis key
+	sidPtr, sidErr := auth.GenerateToken()
+	if sidErr != nil {
+		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate session"})
+		return
+	}
+	sessionID := *sidPtr
+
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
 	}
-	rh := sha256.Sum256([]byte(refreshToken))
-	sessionID := hex.EncodeToString(rh[:])
 	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
@@ -80,7 +85,8 @@ func (a *App) handleLogin(c *gin.Context) {
 		"client_id":   loginData.ClientID,
 	}
 
-	a.userRedis.InsertToken(context.Background(), refreshToken, sessionData, 14*24*time.Hour) //Saves the refresh token in Redis with an expiry of 14 days
+	// Store session under raw sessionID — no hashing
+	a.userRedis.InsertSession(context.Background(), sessionID, sessionData, 14*24*time.Hour)
 
 	c.SetCookie("access_token", accessToken, 900, "/", "", true, true)           // 15 min
 	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", true, true) // 14 days
@@ -150,11 +156,12 @@ func (a *App) introspect(c *gin.Context) {
 
 	claims, err := auth.ValidateToken(data.AccessToken)
 	if err != nil {
-		c.JSON(200, gin.H{"active": false}) // RFC 7662
+		c.JSON(200, gin.H{"active": false})
 		return
 	}
 
-	// Check session hash — blacklisted=1 means both access & refresh are revoked
+	logger.Log(claims.SessionID, logger.Debug)
+
 	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
 	if sessionErr != nil || session["blacklisted"] == "1" {
 		c.JSON(200, gin.H{"active": false})
@@ -249,24 +256,27 @@ func (a *App) token(c *gin.Context) {
 
 	nonce := authData["nonce"]
 
-	// Generate refresh token first to compute session ID
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, "")
+	// Generate sessionID independently — embedded in both tokens
+	tokenSidPtr, tokenSidErr := auth.GenerateToken()
+	if tokenSidErr != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+	tokenSessionID := *tokenSidPtr
+
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	rth := sha256.Sum256([]byte(refreshToken))
-	tokenSessionID := hex.EncodeToString(rth[:])
 	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
 
-	// Persist the refresh token in Redis
-	a.userRedis.InsertToken(context.Background(), refreshToken, map[string]interface{}{
-		"user_id":     user.UserID,
-		"blacklisted": false,
+	a.userRedis.InsertSession(context.Background(), tokenSessionID, map[string]interface{}{
+		"user_id": user.UserID, "blacklisted": false,
 	}, 14*24*time.Hour)
 
 	c.JSON(200, gin.H{
@@ -294,8 +304,9 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), req.RefreshToken)
-	if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
+	// Use sessionID directly from refresh token claims
+	tokenData, redisErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
+	if redisErr != nil || tokenData["blacklisted"] == "1" {
 		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
@@ -306,10 +317,7 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	// Compute session ID from existing refresh token
-	existingH := sha256.Sum256([]byte(req.RefreshToken))
-	existingSessionID := hex.EncodeToString(existingH[:])
-	newAccessToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, existingSessionID)
+	newAccessToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -319,18 +327,19 @@ func (a *App) refresh(c *gin.Context) {
 
 	// Sliding window: rotate refresh token only when < 4 days remain (i.e. 10+ days old)
 	if time.Until(claims.ExpiresAt.Time) < 4*24*time.Hour {
-		newRefreshToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, "")
-		if err == nil {
-			// Re-bind access token to the new session
-			newH := sha256.Sum256([]byte(newRefreshToken))
-			newSessionID := hex.EncodeToString(newH[:])
-			newAccessToken, _ = auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID)
-			response["access_token"] = newAccessToken
-			a.userRedis.DeleteToken(context.Background(), req.RefreshToken)
-			a.userRedis.InsertToken(context.Background(), newRefreshToken, map[string]interface{}{
-				"user_id": int32(parsedID), "blacklisted": false, "client_id": tokenData["client_id"],
-			}, 14*24*time.Hour)
-			response["refresh_token"] = newRefreshToken
+		newSidPtr, newSidErr := auth.GenerateToken()
+		if newSidErr == nil {
+			newSessionID := *newSidPtr
+			newRefreshToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID)
+			if err == nil {
+				newAccessToken, _ = auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID)
+				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
+				a.userRedis.InsertSession(context.Background(), newSessionID, map[string]interface{}{
+					"user_id": int32(parsedID), "blacklisted": false, "client_id": tokenData["client_id"],
+				}, 14*24*time.Hour)
+				response["access_token"] = newAccessToken
+				response["refresh_token"] = newRefreshToken
+			}
 		}
 	}
 
@@ -419,8 +428,6 @@ func (a *App) authorize(c *gin.Context) {
 			return
 		}
 
-		cookieH := sha256.Sum256([]byte(refreshCookie))
-		cookieSessionID := hex.EncodeToString(cookieH[:])
 		newAccessToken, tokenErr := auth.GenerateJWTToken(
 			int32(parsedID),
 			refreshClaims.Email,
@@ -429,7 +436,7 @@ func (a *App) authorize(c *gin.Context) {
 			"access",
 			time.Now().Add(15*time.Minute),
 			nonce,
-			cookieSessionID,
+			refreshClaims.SessionID,
 		)
 		if tokenErr != nil {
 			c.JSON(500, gin.H{"error": "Server error"})

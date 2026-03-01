@@ -19,7 +19,7 @@ type JWTPayload struct {
 	LastName  string `json:"last_name"`
 	TokenType string `json:"token_type"`
 	Nonce     string `json:"nonce,omitempty"`
-	SessionID string `json:"sid,omitempty"`
+	SessionID string `json:"sid"`
 	jwt.RegisteredClaims
 }
 
