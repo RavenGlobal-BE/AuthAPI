@@ -346,6 +346,18 @@ func (a *App) refresh(c *gin.Context) {
 	c.JSON(200, response)
 }
 
+func (a *App) logout(c *gin.Context) {
+	accessToken := c.GetHeader("Authorization")
+	claims, err := auth.ValidateToken(accessToken)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	a.userRedis.DeleteToken(context.Background(), claims.SessionID)
+	c.JSON(200, gin.H{"message": "Logged out successfully"})
+}
+
 // OIDC GET /authorize endpoint
 // Checks whether the user is authenticated (and still has a valid token).
 func (a *App) authorize(c *gin.Context) {

@@ -91,9 +91,7 @@ func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, data m
 
 // Deletes a refresh token from Redis (used during rotation).
 func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
-	hash := sha256.New()
-	hash.Write([]byte(refreshToken))
-	tr.redis.client.Del(ctx, hex.EncodeToString(hash.Sum(nil)))
+	tr.redis.client.Del(ctx, refreshToken)
 }
 
 // Stores an auth code in Redis with a 60s TTL.
