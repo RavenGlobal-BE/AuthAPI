@@ -270,6 +270,7 @@ func (a *App) token(c *gin.Context) {
 
 func (a *App) refresh(c *gin.Context) {
 	var req struct {
+		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
@@ -278,47 +279,45 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	// Validate the refresh token JWT
 	claims, err := auth.ValidateToken(req.RefreshToken)
 	if err != nil || claims.TokenType != "refresh" {
 		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
 
-	// Check Redis: token must exist and not be blacklisted
 	tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), req.RefreshToken)
 	if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
 		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
 
-	// Parse user ID from claims
-	parsedID, parseErr := strconv.ParseInt(claims.Subject, 10, 32)
-	if parseErr != nil {
+	parsedID, err := strconv.ParseInt(claims.Subject, 10, 32)
+	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
 
-	// Issue a new access token
-	newAccessToken, tokenErr := auth.GenerateJWTToken(
-		int32(parsedID),
-		claims.Email,
-		claims.FirstName,
-		claims.LastName,
-		"access",
-		time.Now().Add(15*time.Minute),
-		claims.Nonce,
-	)
-	if tokenErr != nil {
+	newAccessToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce)
+	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
 
-	c.JSON(200, gin.H{
-		"access_token": newAccessToken,
-		"token_type":   "Bearer",
-		"expires_in":   900,
-	})
+	response := gin.H{"access_token": newAccessToken, "token_type": "Bearer", "expires_in": 900}
+
+	// Sliding window: rotate refresh token only when < 4 days remain (i.e. 10+ days old)
+	if time.Until(claims.ExpiresAt.Time) < 4*24*time.Hour {
+		newRefreshToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce)
+		if err == nil {
+			a.userRedis.DeleteToken(context.Background(), req.RefreshToken)
+			a.userRedis.InsertToken(context.Background(), newRefreshToken, map[string]interface{}{
+				"user_id": int32(parsedID), "blacklisted": false, "client_id": tokenData["client_id"],
+			}, 14*24*time.Hour)
+			response["refresh_token"] = newRefreshToken
+		}
+	}
+
+	c.JSON(200, response)
 }
 
 // OIDC GET /authorize endpoint

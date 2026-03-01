@@ -72,6 +72,13 @@ func (tr *TokenRepo) GetTokenInfo(ctx context.Context, refreshToken string) (map
 	return result, nil
 }
 
+// Deletes a refresh token from Redis (used during rotation).
+func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
+	hash := sha256.New()
+	hash.Write([]byte(refreshToken))
+	tr.redis.client.Del(ctx, hex.EncodeToString(hash.Sum(nil)))
+}
+
 // Stores an auth code in Redis with a 60s TTL.
 func (tr *TokenRepo) InsertAuthCode(ctx context.Context, code string, data map[string]interface{}) error {
 	key := "auth_code:" + code
