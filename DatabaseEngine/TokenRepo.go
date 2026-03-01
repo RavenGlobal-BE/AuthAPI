@@ -72,6 +72,17 @@ func (tr *TokenRepo) GetTokenInfo(ctx context.Context, refreshToken string) (map
 	return result, nil
 }
 
+func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[string]string, error) {
+	if sessionID == "" {
+		return nil, errors.New("empty session ID")
+	}
+	result, err := tr.redis.client.HGetAll(ctx, sessionID).Result()
+	if err != nil || len(result) == 0 {
+		return nil, errors.New("session not found")
+	}
+	return result, nil
+}
+
 // Deletes a refresh token from Redis (used during rotation).
 func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
 	hash := sha256.New()
