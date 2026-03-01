@@ -64,9 +64,6 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 }
 
 func (Ur *Usersrepo) SetupCompanyIntegration() error {
-	// This function checks wheter the table contains all the elements used in this API.
-	// If it doesn't, it creates the missing elements.
-
 	schema := "accounts"
 	table := "apps"
 
@@ -78,6 +75,7 @@ func (Ur *Usersrepo) SetupCompanyIntegration() error {
 		app_name      VARCHAR(255) NOT NULL,
 		company       VARCHAR(255) NOT NULL,
 		redirect_uri  VARCHAR(255) NOT NULL,
+		is_public     BOOLEAN NOT NULL DEFAULT false,
 		active        BOOLEAN NOT NULL DEFAULT true,
 		created_at    TIMESTAMP NOT NULL DEFAULT NOW()
 	);`, schema, table)
@@ -87,7 +85,13 @@ func (Ur *Usersrepo) SetupCompanyIntegration() error {
 		return err
 	}
 
-	logger.Log("3rdParty Apps added", logger.Info)
+	// Add is_public to existing tables that were created before this column existed
+	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT false;`,
+		schema, table,
+	))
+
+	logger.Log("3rdParty Apps table ready", logger.Info)
 
 	return nil
 }

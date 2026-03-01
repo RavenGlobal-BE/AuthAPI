@@ -22,6 +22,7 @@ type App struct {
 	ms        *mailer.MailService
 	userRedis *dbEngine.TokenRepo
 	rateLimit *dbEngine.RateRepo
+	cr        *dbEngine.ClientsRepo
 }
 
 func main() {
@@ -56,11 +57,14 @@ func main() {
 	rateLimitRedis := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 1)
 	rateRepo := dbEngine.NewRateRepo(rateLimitRedis)
 
+	clientsRepo := dbEngine.NewClientsRepo(db)
+
 	app := &App{
 		ur:        userRepo,
 		ms:        mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
 		userRedis: userRedis,
 		rateLimit: rateRepo,
+		cr:        clientsRepo,
 	}
 
 	RegisterRoutes(r, app)

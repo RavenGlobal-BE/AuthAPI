@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"net/url"
-	"os"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	mailer "raven/auth/Mailer"
@@ -20,6 +21,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Nonce    string `json:"nonce"`
+		ClientID string `json:"client_id"`
 	}
 
 	err := c.ShouldBindJSON(&loginData)
@@ -31,6 +33,17 @@ func (a *App) handleLogin(c *gin.Context) {
 	mailValid := mailer.EmailIsValid(loginData.Email)
 	if mailValid == false {
 		c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
+		return
+	}
+
+	// Validate client_id exists and is active
+	if loginData.ClientID == "" {
+		c.JSON(400, gin.H{"success": false, "reason": "client_id is required"})
+		return
+	}
+	client := a.cr.GetClientByID(context.Background(), loginData.ClientID)
+	if client == nil {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid client"})
 		return
 	}
 
@@ -59,6 +72,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		"user_id":     user.UserID,
 		"blacklisted": false,
 		"access":      accessToken,
+		"client_id":   loginData.ClientID,
 	}
 
 	a.userRedis.InsertToken(context.Background(), refreshToken, sessionData, 14*24*time.Hour) //Saves the refresh token in Redis with an expiry of 14 days
@@ -159,12 +173,99 @@ func (a *App) token(c *gin.Context) {
 		return
 	}
 
-	if clientID != os.Getenv("CLIENT_ID") || clientSecret != os.Getenv("CLIENT_SECRET") {
+	// Look up the client in the DB
+	client := a.cr.GetClientByID(context.Background(), clientID)
+	if client == nil {
 		c.JSON(401, gin.H{"error": "Invalid client"})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "Placeholder for token endpoint"})
+	// Verify the client secret against the stored hash
+	if client.IsPublic {
+		// Public client: verify PKCE code_verifier
+		codeVerifier := c.PostForm("code_verifier")
+		if codeVerifier == "" {
+			c.JSON(401, gin.H{"error": "code_verifier required for public clients"})
+			return
+		}
+		// Will be verified against stored code_challenge after consuming the auth code
+	} else {
+		// Confidential client: verify client_secret
+		if !auth.CheckPasswordHash(clientSecret, client.ClientSecret) {
+			c.JSON(401, gin.H{"error": "Invalid client"})
+			return
+		}
+	}
+
+	// Validate redirect_uri against what's registered for this client
+	if client.RedirectURI != redirectURI {
+		c.JSON(401, gin.H{"error": "Invalid client"})
+		return
+	}
+
+	// Consume the auth code — reads + deletes from Redis (one-time use)
+	authData, err := a.userRedis.GetAuthCode(context.Background(), code)
+	if err != nil {
+		c.JSON(401, gin.H{"error": "Invalid grant"})
+		return
+	}
+
+	// Validate client_id and redirect_uri match what was stored during /authorize
+	if authData["client_id"] != clientID || authData["redirect_uri"] != redirectURI {
+		c.JSON(401, gin.H{"error": "Invalid grant"})
+		return
+	}
+
+	// For public clients, verify PKCE: SHA256(code_verifier) must match stored code_challenge
+	if client.IsPublic {
+		codeVerifier := c.PostForm("code_verifier")
+		hash := sha256.Sum256([]byte(codeVerifier))
+		computed := base64.RawURLEncoding.EncodeToString(hash[:])
+		if computed != authData["code_challenge"] {
+			c.JSON(401, gin.H{"error": "Invalid grant"})
+			return
+		}
+	}
+
+	// Look up the user to get their details for the JWT
+	userIDInt, parseErr := strconv.Atoi(authData["user_id"])
+	if parseErr != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	user := a.ur.GetAccountById(userIDInt)
+	if user == nil {
+		c.JSON(401, gin.H{"error": "Invalid grant"})
+		return
+	}
+
+	nonce := authData["nonce"]
+
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	// Persist the refresh token in Redis
+	a.userRedis.InsertToken(context.Background(), refreshToken, map[string]interface{}{
+		"user_id":     user.UserID,
+		"blacklisted": false,
+	}, 14*24*time.Hour)
+
+	c.JSON(200, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"token_type":    "Bearer",
+		"expires_in":    900,
+	})
 }
 
 func (a *App) refresh(c *gin.Context) {
@@ -232,6 +333,19 @@ func (a *App) authorize(c *gin.Context) {
 
 	if clientID == "" || redirectURI == "" || responseType != "code" || scope == "" || state == "" || nonce == "" {
 		c.JSON(400, gin.H{"error": "Invalid Request"})
+		return
+	}
+
+	// Validate the client_id against registered apps
+	client := a.cr.GetClientByID(context.Background(), clientID)
+	if client == nil {
+		c.JSON(400, gin.H{"error": "invalid_client"})
+		return
+	}
+
+	// Also ensure the redirect_uri matches the registered one
+	if client.RedirectURI != redirectURI {
+		c.JSON(400, gin.H{"error": "invalid_redirect_uri"})
 		return
 	}
 
@@ -322,6 +436,17 @@ func (a *App) authorize(c *gin.Context) {
 		"redirect_uri": redirectURI,
 		"nonce":        nonce,
 		"scope":        scope,
+	}
+
+	// For public clients (mobile/SPA), require and store the PKCE code_challenge
+	if client.IsPublic {
+		codeChallenge := c.Query("code_challenge")
+		codeChallengeMethod := c.Query("code_challenge_method")
+		if codeChallenge == "" || codeChallengeMethod != "S256" {
+			c.JSON(400, gin.H{"error": "PKCE required for this client"})
+			return
+		}
+		authCodeData["code_challenge"] = codeChallenge
 	}
 
 	if err := a.userRedis.InsertAuthCode(context.Background(), *code, authCodeData); err != nil {
