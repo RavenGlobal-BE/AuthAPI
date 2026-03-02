@@ -82,16 +82,16 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 
 	//User actions
 	router.POST("/login", auth.RateLimiting(app.rateLimit), app.handleLogin)
-	router.POST("/register", app.register)
+	router.POST("/register", auth.RateLimiting(app.rateLimit), app.register)
 
 	//Token checker
 	router.POST("/introspect", app.introspect)
 	router.GET("/authorize", app.authorize)
 
 	//Token management
-	router.POST("/token", app.token)
-	router.POST("/refresh", app.refresh)
-	router.POST("/logout", app.logout)
+	router.POST("/token", auth.RateLimiting(app.rateLimit), app.token)
+	router.POST("/refresh", auth.RateLimiting(app.rateLimit), app.refresh)
+	router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout)
 
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)

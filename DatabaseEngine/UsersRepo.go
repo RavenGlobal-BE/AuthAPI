@@ -2,6 +2,7 @@ package databaseengine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	logger "raven/auth/Logging"
 	"time"
@@ -154,6 +155,19 @@ func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	}
 
 	return v
+}
+
+func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
+	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
+		return errors.New("Invalid request")
+	}
+
+	_, err := Ur.db.pool.Exec(context.Background(), `
+		INSERT INTO accounts.users (email, password, first_name, last_name, "publicUsername", "countryCode")
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, email, password, firstName, lastName, username, countryCode)
+
+	return err
 }
 
 type UserAuth struct {
