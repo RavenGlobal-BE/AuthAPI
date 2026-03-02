@@ -347,6 +347,24 @@ func (a *App) refresh(c *gin.Context) {
 	c.JSON(200, response)
 }
 
+func (a *App) register(c *gin.Context) {
+	var req struct {
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		Username    string `json:"username"`
+		CountryCode string `json:"country_code"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Register"})
+}
+
 func (a *App) logout(c *gin.Context) {
 	accessToken := c.GetHeader("Authorization")
 	if !strings.HasPrefix(accessToken, "Bearer ") {

@@ -60,6 +60,11 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 		return err
 	}
 
+	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS is_verified SMALLINT NOT NULL DEFAULT 0;`,
+		schema, table,
+	))
+
 	return nil
 }
 

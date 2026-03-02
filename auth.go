@@ -76,13 +76,19 @@ func main() {
 }
 
 func RegisterRoutes(router *gin.Engine, app *App) {
-	router.POST("/login", auth.RateLimiting(app.rateLimit), app.handleLogin)
+	//Misc
 	router.GET("/about", handleAbout)
-	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest)
+	router.GET("/dbTest", auth.JWTAuthMiddleware(), app.dbtest) //Used as test
 
-	//Checks whether the token is still valid.
+	//User actions
+	router.POST("/login", auth.RateLimiting(app.rateLimit), app.handleLogin)
+	router.POST("/register", app.register)
+
+	//Token checker
 	router.POST("/introspect", app.introspect)
 	router.GET("/authorize", app.authorize)
+
+	//Token management
 	router.POST("/token", app.token)
 	router.POST("/refresh", app.refresh)
 	router.POST("/logout", app.logout)
