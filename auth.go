@@ -8,6 +8,8 @@ import (
 	dbEngine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
+	"strings"
+	"time"
 
 	"os"
 
@@ -47,8 +49,16 @@ func main() {
 	defer db.Close() //Database closes when the server is shutting down.
 
 	userRepo := dbEngine.NewUsersRepo(db)
-	if err = userRepo.Init(); err != nil {
-		panic(err)
+	for {
+		err = userRepo.Init()
+		if err == nil { //connected Successfully
+			break
+		}
+		if !strings.Contains(err.Error(), "57P03") {
+			panic(err) // real error, not a startup race
+		}
+		logging.Log("Postgres is starting up, retrying in 15 seconds...", logging.Warning)
+		time.Sleep(15 * time.Second)
 	}
 
 	redisDataStore := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 0)
