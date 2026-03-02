@@ -1,4 +1,7 @@
 # Raven ONE Authentication API
+
+**NOTE -** This is currently NOT backwards compatible with the pre-2.0 versions. We'll continue to work on this new system and WILL NOT release this auth to the world without a proper migration flow.
+
 This is the brand new system Raven will be using for authentication & authorization. It supports both regular logins, registrations, Enterprise SSO (soon) & MFA (soon). Written in **Go(lang)** to prioritize performance where it's the most critical.
 
 ## What does it allow you to do?
