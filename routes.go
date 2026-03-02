@@ -357,12 +357,12 @@ func (a *App) register(c *gin.Context) {
 		CountryCode string `json:"country_code"`
 	}
 
-	hashedPass, err := auth.HashPassword(req.Password)
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
+
+	hashedPass, err := auth.HashPassword(req.Password)
 
 	err = a.ur.RegisterAccount(req.Email, hashedPass, req.FirstName, req.LastName, req.CountryCode, req.Username)
 	if err != nil {

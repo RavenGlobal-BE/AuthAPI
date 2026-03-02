@@ -1,18 +1,18 @@
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:18.3
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 6464
       POSTGRES_DB: prod
-      POSTGRES_INITDB_ARGS: "--max-connections=100"
+      POSTGRES_INITDB_ARGS: "--max-connections=150"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
 
   redis:
-    image: redis:alpine
+    image: redis
     ports:
       - "6379:6379"
 
