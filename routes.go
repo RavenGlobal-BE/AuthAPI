@@ -11,6 +11,7 @@ import (
 	logger "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -348,9 +349,16 @@ func (a *App) refresh(c *gin.Context) {
 
 func (a *App) logout(c *gin.Context) {
 	accessToken := c.GetHeader("Authorization")
-	claims, err := auth.ValidateToken(accessToken)
-	if err != nil {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+	if !strings.HasPrefix(accessToken, "Bearer ") {
+		c.JSON(401, gin.H{"error": "Unformatted token"})
+		return
+	}
+
+	token := strings.Split(accessToken, "Bearer ")[1]
+
+	claims, err := auth.ValidateToken(token)
+	if err != nil || claims.TokenType != "refresh" {
+		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
 
