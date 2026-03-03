@@ -46,3 +46,7 @@ func OpenIDConfig(c *gin.Context) {
 		"claims_supported":                      []string{"sub", "email", "given_name", "family_name", "iat", "exp"},
 	})
 }
+
+func (A *App) todayBG(c *gin.Context) {
+	c.JSON(200, gin.H{"bg": "https://cdn.raven.co.com/authPhotos/IMG_1844.JPG", "photoBy": "Kenza", "Location": "Strasbourg", "Country": "France"})
+}

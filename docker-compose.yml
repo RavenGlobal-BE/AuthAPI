@@ -27,6 +27,9 @@ services:
       - redis
     environment:
       - DATABASE_URL=postgres://postgres:6464@postgres:5432/prod?sslmode=disable
+      - RedisHost=redis
+      - RedisPort=6379
+      - RedisPassword=
 
 volumes:
   postgres_data:

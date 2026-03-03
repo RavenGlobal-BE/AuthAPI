@@ -106,4 +106,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)
 	router.GET("/.well-known/openid-configuration", OpenIDConfig)
+
+	//Personalization
+	router.GET("/todayBG", app.todayBG)
 }
