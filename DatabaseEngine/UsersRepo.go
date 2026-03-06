@@ -83,7 +83,8 @@ func (Ur *Usersrepo) SetupCompanyIntegration() error {
 		redirect_uri  VARCHAR(255) NOT NULL,
 		is_public     BOOLEAN NOT NULL DEFAULT false,
 		active        BOOLEAN NOT NULL DEFAULT true,
-		created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+		created_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+		company_icon  VARCHAR(255) DEFAULT NULL
 	);`, schema, table)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
@@ -94,6 +95,11 @@ func (Ur *Usersrepo) SetupCompanyIntegration() error {
 	// Add is_public to existing tables that were created before this column existed
 	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
 		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT false;`,
+		schema, table,
+	))
+
+	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS company_icon VARCHAR(255) DEFAULT NULL;`,
 		schema, table,
 	))
 
