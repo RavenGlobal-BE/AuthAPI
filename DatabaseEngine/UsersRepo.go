@@ -145,13 +145,16 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, created_at, is_deleted from accounts.users where user_id = $1`, id)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, created_at, is_deleted from accounts.users where user_id = $1`, id)
+
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
 		&v.LastName,
+		&v.PublicUsername,
+		&v.CountryCode,
 		&v.CreatedAt,
 		&v.IsDeleted,
 	)
@@ -177,13 +180,15 @@ func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, count
 }
 
 type UserAuth struct {
-	UserID    int32
-	Email     string
-	Password  string // Bycrypted (cost 12)
-	FirstName string
-	LastName  string
-	CreatedAt time.Time
-	IsDeleted int16
+	UserID         int32
+	Email          string
+	Password       string // Bycrypted (cost 12)
+	FirstName      string
+	LastName       string
+	CountryCode    string
+	PublicUsername *string
+	CreatedAt      time.Time
+	IsDeleted      int16
 }
 
 type User struct {

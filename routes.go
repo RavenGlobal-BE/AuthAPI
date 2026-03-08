@@ -69,12 +69,12 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 	sessionID := *sidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
@@ -265,12 +265,12 @@ func (a *App) token(c *gin.Context) {
 	}
 	tokenSessionID := *tokenSidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -318,7 +318,7 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	newAccessToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID)
+	newAccessToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, claims.Country)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -331,9 +331,9 @@ func (a *App) refresh(c *gin.Context) {
 		newSidPtr, newSidErr := auth.GenerateToken()
 		if newSidErr == nil {
 			newSessionID := *newSidPtr
-			newRefreshToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID)
+			newRefreshToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, claims.Country)
 			if err == nil {
-				newAccessToken, _ = auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID)
+				newAccessToken, _ = auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country)
 				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 				a.userRedis.InsertSession(context.Background(), newSessionID, map[string]interface{}{
 					"user_id": int32(parsedID), "blacklisted": false, "client_id": tokenData["client_id"],
@@ -483,6 +483,7 @@ func (a *App) authorize(c *gin.Context) {
 			time.Now().Add(15*time.Minute),
 			nonce,
 			refreshClaims.SessionID,
+			refreshClaims.Country,
 		)
 		if tokenErr != nil {
 			c.JSON(500, gin.H{"error": "Server error"})
