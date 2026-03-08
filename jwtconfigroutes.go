@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"os"
 
@@ -48,10 +49,21 @@ func OpenIDConfig(c *gin.Context) {
 }
 
 func (A *App) todayBG(c *gin.Context) {
-	c.JSON(200, gin.H{"bg": "https://cdn.raven.co.com/particleLocations/FR.jpg", "photoBy": "Kenza", "Location": "Paris", "Country": "France"})
-	//c.JSON(200, gin.H{"bg": "https://cdn.raven.co.com/authPhotos/IMG_1844.JPG", "photoBy": "Kenza", "Location": "Strasbourg", "Country": "France"})
+	c.JSON(200, gin.H{"bg": "https://cdn.raven.co.com/authPhotos/Malta.JPG", "photoBy": "Kenza", "Location": "Marsaxlokk", "Country": "MT"})
 }
 
 func (a *App) clientInfo(c *gin.Context) {
-	c.JSON(200, gin.H{"imageEnabled": true, "imageURL": "https://cdn.raven.co.com/orgIcons/ROVerdis.png"})
+	clientID := c.Query("client_id")
+
+	client := a.cr.GetClientByID(context.Background(), clientID)
+	if client == nil {
+		c.JSON(401, gin.H{"error": "Invalid client"})
+		return
+	}
+
+	imageURL := ""
+	if client.CompanyIcon != nil {
+		imageURL = *client.CompanyIcon
+	}
+	c.JSON(200, gin.H{"imageEnabled": client.CompanyIcon != nil, "imageURL": imageURL})
 }

@@ -9,7 +9,7 @@ type ClientsRepo struct {
 	db *DB
 }
 
-type App struct {
+type ClientInfo struct {
 	AppID        int32
 	ClientID     string
 	ClientSecret string // stored as Argon2 hash
@@ -19,6 +19,7 @@ type App struct {
 	IsPublic     bool // true = mobile/SPA (PKCE required), false = server-side (client_secret required)
 	Active       bool
 	CreatedAt    time.Time
+	CompanyIcon  *string // nullable in DB
 }
 
 func NewClientsRepo(db *DB) *ClientsRepo {
@@ -26,13 +27,13 @@ func NewClientsRepo(db *DB) *ClientsRepo {
 }
 
 // Looks up a client app by client_id. Returns nil if not found or inactive.
-func (cr *ClientsRepo) GetClientByID(ctx context.Context, clientID string) *App {
-	var app App
+func (cr *ClientsRepo) GetClientByID(ctx context.Context, clientID string) *ClientInfo {
+	var app ClientInfo
 
 	row := cr.db.pool.QueryRow(ctx, `
-		SELECT app_id, client_id, client_secret, app_name, company, redirect_uri, is_public, active, created_at
+		SELECT app_id, client_id, client_secret, app_name, company, redirect_uri, is_public, active, created_at, company_icon
 		FROM accounts.apps
-		WHERE client_id = $1 AND active = true
+		WHERE client_id = $1
 	`, clientID)
 
 	err := row.Scan(
@@ -45,6 +46,7 @@ func (cr *ClientsRepo) GetClientByID(ctx context.Context, clientID string) *App 
 		&app.IsPublic,
 		&app.Active,
 		&app.CreatedAt,
+		&app.CompanyIcon,
 	)
 
 	if err != nil {

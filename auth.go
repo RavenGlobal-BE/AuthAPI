@@ -29,7 +29,6 @@ type App struct {
 
 func main() {
 	logging.Log("Starting Raven Auth Server...", logging.Debug)
-
 	//generateKeyPair()
 
 	if err := godotenv.Load(); err != nil {
@@ -109,4 +108,5 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 
 	//Personalization
 	router.GET("/todayBG", app.todayBG)
+	router.GET("/clientInfo", app.clientInfo)
 }

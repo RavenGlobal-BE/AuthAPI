@@ -13,3 +13,6 @@ var Build float32 = 5
 // Server configurations
 var Port int = 3000
 var AllowQuantumSecure bool = false
+
+// Raven ONE configurations
+var CdnEndpoint string = "https://cdn.raven.co.com/orgIcons/"

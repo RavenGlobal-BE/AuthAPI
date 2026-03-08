@@ -89,8 +89,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	// Store session under raw sessionID — no hashing
 	a.userRedis.InsertSession(context.Background(), sessionID, sessionData, 14*24*time.Hour)
 
-	c.SetCookie("access_token", accessToken, 900, "/", "", true, true)           // 15 min
-	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", true, true) // 14 days
+	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
+	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
 
 	c.JSON(200, gin.H{
 		"success":       true,
@@ -420,7 +420,7 @@ func (a *App) authorize(c *gin.Context) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("https://auth.raven.co.com/login?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
+	loginURL := fmt.Sprintf("http://localhost:3001/fr?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
 		url.QueryEscape(clientID),
 		url.QueryEscape(redirectURI),
 		url.QueryEscape(responseType),
@@ -445,15 +445,15 @@ func (a *App) authorize(c *gin.Context) {
 	if err != nil || cookieDetails.ExpiresAt.Before(time.Now()) || cookieDetails.TokenType != "access" {
 		// Access token invalid or expired — try the refresh token
 		if refreshCookie == "" {
-			c.SetCookie("access_token", "", -1, "/", "", true, true)
+			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.Redirect(302, loginURL)
 			return
 		}
 
 		refreshClaims, refreshErr := auth.ValidateToken(refreshCookie)
 		if refreshErr != nil || refreshClaims.TokenType != "refresh" {
-			c.SetCookie("access_token", "", -1, "/", "", true, true)
-			c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+			c.SetCookie("access_token", "", -1, "/", "", false, true)
+			c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 			c.Redirect(302, loginURL)
 			return
 		}
@@ -461,8 +461,8 @@ func (a *App) authorize(c *gin.Context) {
 		// Check Redis: token must exist and not be blacklisted
 		tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), refreshCookie)
 		if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
-			c.SetCookie("access_token", "", -1, "/", "", true, true)
-			c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+			c.SetCookie("access_token", "", -1, "/", "", false, true)
+			c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 			c.Redirect(302, loginURL)
 			return
 		}
@@ -489,7 +489,7 @@ func (a *App) authorize(c *gin.Context) {
 			return
 		}
 
-		c.SetCookie("access_token", newAccessToken, 900, "/", "", true, true)
+		c.SetCookie("access_token", newAccessToken, 900, "/", "", false, true)
 		userID = tokenData["user_id"]
 	} else {
 		userID = cookieDetails.Subject
