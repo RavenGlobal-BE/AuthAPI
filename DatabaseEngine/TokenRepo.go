@@ -2,6 +2,7 @@ package databaseengine
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -133,4 +134,43 @@ func (tr *TokenRepo) RevokeToken(ctx context.Context, jti string, ttl time.Durat
 func (tr *TokenRepo) IsRevoked(ctx context.Context, jti string) bool {
 	result, _ := tr.redis.client.Exists(ctx, "revoked:"+jti).Result()
 	return result > 0
+}
+
+// Based on authorization.go GenerateToken since i can't import it due to an "import cycle" error, i have to do it this way.
+func (tr *TokenRepo) signUpInsert(ctx context.Context, email, password, firstName, lastName, countryCode, username string) (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", err
+	}
+	rawToken := hex.EncodeToString(tokenBytes)
+
+	hash := sha256.Sum256([]byte(rawToken))
+	key := "signup:" + hex.EncodeToString(hash[:])
+
+	structure := map[string]interface{}{
+		"email":       email,
+		"password":    password, //This is gonna arrive as a hashed password
+		"firstName":   firstName,
+		"lastName":    lastName,
+		"countryCode": countryCode,
+		"username":    username,
+	}
+
+	if err := tr.redis.client.HSet(ctx, key, structure).Err(); err != nil {
+		return "", err
+	}
+
+	if err := tr.redis.client.Expire(ctx, key, 24*time.Hour).Err(); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// Checks whether the key actually exists. And if it does
+func (tr *TokenRepo) verifySignup(ctx context.Context, key string) error {
+	if err := tr.redis.client.Get(ctx, key).Err(); err != nil {
+		return err
+	}
+	return nil
 }

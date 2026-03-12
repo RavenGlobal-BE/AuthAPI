@@ -16,21 +16,106 @@ func NewUsersRepo(db *DB) *Usersrepo {
 	return &Usersrepo{db: db}
 }
 
+// It queries the users database based on the
+func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
+	var v = &UserAuth{} //creates an empty struct
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, created_at, is_deleted from accounts.users where email = $1`, mail)
+	err := row.Scan(
+		&v.UserID,
+		&v.Email,
+		&v.Password,
+		&v.FirstName,
+		&v.LastName,
+		&v.CreatedAt,
+		&v.IsDeleted,
+	)
+
+	if err != nil {
+		return nil
+	}
+
+	return v
+}
+
+// It queries the users database based on the
+func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
+	var v = &UserAuth{} //creates an empty struct
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, created_at, is_deleted from accounts.users where user_id = $1`, id)
+
+	err := row.Scan(
+		&v.UserID,
+		&v.Email,
+		&v.Password,
+		&v.FirstName,
+		&v.LastName,
+		&v.PublicUsername,
+		&v.CountryCode,
+		&v.CreatedAt,
+		&v.IsDeleted,
+	)
+
+	if err != nil {
+		return nil
+	}
+
+	return v
+}
+
+func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
+	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
+		return errors.New("Invalid request")
+	}
+
+	_, err := Ur.db.pool.Exec(context.Background(), `
+		INSERT INTO accounts.users (email, password, first_name, last_name, "publicusername", "countrycode")
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, email, password, firstName, lastName, username, countryCode)
+
+	return err
+}
+
+func (Ur *Usersrepo) verifyAccount(email string) error {
+	_, err := Ur.db.pool.Exec(context.Background(), `
+		UPDATE accounts.users SET is_verified = 1 WHERE email = $1;
+	`, email)
+	return err
+}
+
+type UserAuth struct {
+	UserID         int32
+	Email          string
+	Password       string // Bycrypted (cost 12)
+	FirstName      string
+	LastName       string
+	CountryCode    string
+	PublicUsername *string
+	CreatedAt      time.Time
+	IsDeleted      int16
+}
+
+type User struct {
+	UserID         int32
+	Email          string
+	Password       string // Bycrypted (cost 12)
+	FirstName      string
+	LastName       *string
+	PublicUsername *string
+	CountryCode    string
+	CreatedAt      time.Time
+	IsDeleted      int16
+	TimeDeletion   *time.Time
+}
+
 func (Ur *Usersrepo) Init() error {
-	err := Ur.SetupSchema()
-	if err != nil {
-		return err
+	for _, step := range []func() error{
+		Ur.SetupSchema,
+		Ur.SetupUsersTable,
+		Ur.SetupCompanyIntegration,
+	} {
+		if err := step(); err != nil {
+			return err
+		}
 	}
-	err = Ur.SetupUsersTable()
-	if err != nil {
-		return err
-	}
-
-	err = Ur.SetupCompanyIntegration()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -119,87 +204,4 @@ func (Ur *Usersrepo) SetupSchema() error {
 	}
 
 	return nil
-}
-
-// It queries the users database based on the
-func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
-	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, created_at, is_deleted from accounts.users where email = $1`, mail)
-	err := row.Scan(
-		&v.UserID,
-		&v.Email,
-		&v.Password,
-		&v.FirstName,
-		&v.LastName,
-		&v.CreatedAt,
-		&v.IsDeleted,
-	)
-
-	if err != nil {
-		return nil
-	}
-
-	return v
-}
-
-// It queries the users database based on the
-func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
-	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, created_at, is_deleted from accounts.users where user_id = $1`, id)
-
-	err := row.Scan(
-		&v.UserID,
-		&v.Email,
-		&v.Password,
-		&v.FirstName,
-		&v.LastName,
-		&v.PublicUsername,
-		&v.CountryCode,
-		&v.CreatedAt,
-		&v.IsDeleted,
-	)
-
-	if err != nil {
-		return nil
-	}
-
-	return v
-}
-
-func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
-	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
-		return errors.New("Invalid request")
-	}
-
-	_, err := Ur.db.pool.Exec(context.Background(), `
-		INSERT INTO accounts.users (email, password, first_name, last_name, "publicUsername", "countryCode")
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, email, password, firstName, lastName, username, countryCode)
-
-	return err
-}
-
-type UserAuth struct {
-	UserID         int32
-	Email          string
-	Password       string // Bycrypted (cost 12)
-	FirstName      string
-	LastName       string
-	CountryCode    string
-	PublicUsername *string
-	CreatedAt      time.Time
-	IsDeleted      int16
-}
-
-type User struct {
-	UserID         int32
-	Email          string
-	Password       string // Bycrypted (cost 12)
-	FirstName      string
-	LastName       *string
-	PublicUsername *string
-	CountryCode    string
-	CreatedAt      time.Time
-	IsDeleted      int16
-	TimeDeletion   *time.Time
 }

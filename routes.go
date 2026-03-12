@@ -366,6 +366,7 @@ func (a *App) register(c *gin.Context) {
 
 	err = a.ur.RegisterAccount(req.Email, hashedPass, req.FirstName, req.LastName, req.CountryCode, req.Username)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
