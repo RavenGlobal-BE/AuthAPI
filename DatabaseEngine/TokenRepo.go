@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"time"
+
+	logger "raven/auth/Logging"
 )
 
 /* This token engine utilizes Redis database 0. KEEP THAT IN MIND WHEN TRYING TO DEBUG */
@@ -137,7 +139,7 @@ func (tr *TokenRepo) IsRevoked(ctx context.Context, jti string) bool {
 }
 
 // Based on authorization.go GenerateToken since i can't import it due to an "import cycle" error, i have to do it this way.
-func (tr *TokenRepo) signUpInsert(ctx context.Context, email, password, firstName, lastName, countryCode, username string) (string, error) {
+func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return "", err
@@ -148,12 +150,7 @@ func (tr *TokenRepo) signUpInsert(ctx context.Context, email, password, firstNam
 	key := "signup:" + hex.EncodeToString(hash[:])
 
 	structure := map[string]interface{}{
-		"email":       email,
-		"password":    password, //This is gonna arrive as a hashed password
-		"firstName":   firstName,
-		"lastName":    lastName,
-		"countryCode": countryCode,
-		"username":    username,
+		"email": email,
 	}
 
 	if err := tr.redis.client.HSet(ctx, key, structure).Err(); err != nil {
@@ -167,10 +164,21 @@ func (tr *TokenRepo) signUpInsert(ctx context.Context, email, password, firstNam
 	return hex.EncodeToString(hash[:]), nil
 }
 
-// Checks whether the key actually exists. And if it does
-func (tr *TokenRepo) verifySignup(ctx context.Context, key string) error {
-	if err := tr.redis.client.Get(ctx, key).Err(); err != nil {
-		return err
+// Checks whether the key actually exists
+func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) (map[string]string, error) {
+	key := "signup:" + verificationlink
+
+	data, err := tr.redis.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+		return nil, err
 	}
-	return nil
+
+	if len(data) == 0 {
+		return nil, errors.New("verification link is invalid or has expired")
+	}
+
+	tr.redis.client.Del(ctx, key)
+
+	return data, nil
 }

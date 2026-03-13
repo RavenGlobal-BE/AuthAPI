@@ -6,6 +6,8 @@ import (
 	"fmt"
 	logger "raven/auth/Logging"
 	"time"
+
+	"github.com/bwmarrin/snowflake"
 )
 
 type Usersrepo struct {
@@ -19,14 +21,13 @@ func NewUsersRepo(db *DB) *Usersrepo {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, created_at, is_deleted from accounts.users where email = $1`, mail)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, is_deleted from accounts.users where email = $1`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
 		&v.LastName,
-		&v.CreatedAt,
 		&v.IsDeleted,
 	)
 
@@ -40,7 +41,7 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, created_at, is_deleted from accounts.users where user_id = $1`, id)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, is_deleted from accounts.users where user_id = $1`, id)
 
 	err := row.Scan(
 		&v.UserID,
@@ -50,7 +51,6 @@ func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 		&v.LastName,
 		&v.PublicUsername,
 		&v.CountryCode,
-		&v.CreatedAt,
 		&v.IsDeleted,
 	)
 
@@ -61,20 +61,32 @@ func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	return v
 }
 
+// Puts all your details into the database
 func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
 	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
 		return errors.New("Invalid request")
 	}
 
-	_, err := Ur.db.pool.Exec(context.Background(), `
-		INSERT INTO accounts.users (email, password, first_name, last_name, "publicusername", "countrycode")
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, email, password, firstName, lastName, username, countryCode)
+	node, err := snowflake.NewNode(1)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	return err
+	userid := node.Generate().Int64()
+
+	_, err = Ur.db.pool.Exec(context.Background(), `
+		INSERT INTO accounts.users (user_id, email, password, first_name, last_name, "publicusername", "countrycode")
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, userid, email, password, firstName, lastName, username, countryCode)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (Ur *Usersrepo) verifyAccount(email string) error {
+func (Ur *Usersrepo) VerifyAccount(email string) error {
 	_, err := Ur.db.pool.Exec(context.Background(), `
 		UPDATE accounts.users SET is_verified = 1 WHERE email = $1;
 	`, email)
@@ -84,12 +96,11 @@ func (Ur *Usersrepo) verifyAccount(email string) error {
 type UserAuth struct {
 	UserID         int32
 	Email          string
-	Password       string // Bycrypted (cost 12)
+	Password       string // ArgonID2 (cost 12)
 	FirstName      string
 	LastName       string
 	CountryCode    string
 	PublicUsername *string
-	CreatedAt      time.Time
 	IsDeleted      int16
 }
 
@@ -101,7 +112,6 @@ type User struct {
 	LastName       *string
 	PublicUsername *string
 	CountryCode    string
-	CreatedAt      time.Time
 	IsDeleted      int16
 	TimeDeletion   *time.Time
 }
@@ -128,16 +138,16 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s.%s (
-    user_id         SERIAL PRIMARY KEY,          -- auto-incrementable key
+    user_id         BIGINT PRIMARY KEY,          -- Twitter Snowflake implementation (soon)
     email           VARCHAR(255) UNIQUE NOT NULL,
     password        VARCHAR(255) NOT NULL,
     first_name      VARCHAR(255) NOT NULL,
     last_name       VARCHAR(255),                -- optional (NULL allowed)
     publicUsername  VARCHAR(255),                -- optional (NULL allowed) -> Means private account
     countryCode     VARCHAR(5) NOT NULL,
-    created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
     is_deleted      SMALLINT NOT NULL DEFAULT 0,
 	is_verified     SMALLINT NOT NULL DEFAULT 0,
+	flags           SMALLINT NOT NULL DEFAULT 0,
     timeDeletion    TIMESTAMP                    -- optional
 	);`, schema, table)
 

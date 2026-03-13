@@ -101,6 +101,31 @@ func (a *App) handleLogin(c *gin.Context) {
 
 }
 
+func (a *App) verify(c *gin.Context) {
+	verificationlink := c.Query("id")
+	fmt.Println(verificationlink)
+
+	if verificationlink == "" {
+		c.JSON(400, gin.H{"success": false, "reason": "No link passed"})
+		return
+	}
+
+	data, err := a.userRedis.VerifySignup(context.Background(), verificationlink)
+	if err != nil {
+		c.JSON(400, gin.H{"success": false, "reason": "Invalid link"})
+		return
+	}
+
+	err = a.ur.VerifyAccount(data["email"])
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+		c.JSON(400, gin.H{"success": false, "reason": "Failed to verify account"})
+		return
+	}
+
+	c.JSON(200, gin.H{"success": true})
+}
+
 func (a *App) handleRefresh(c *gin.Context) {
 	var requestData struct {
 		RefreshToken string `json:"refresh_token"`
@@ -370,6 +395,15 @@ func (a *App) register(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
+
+	key, err := a.userRedis.SignUpInsert(context.Background(), req.Email)
+	if err != nil {
+		fmt.Println(err)
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	logger.Log("Key inserted: "+key, logger.Debug)
 
 	c.JSON(200, gin.H{"message": "Registered successfully."})
 }
