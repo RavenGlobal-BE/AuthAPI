@@ -20,11 +20,11 @@ import (
 /* SUPPORT FOR PASSKEYS & MFA ARE COMING IN AUTH v2.1 */
 
 type App struct {
-	ur        *dbEngine.Usersrepo
-	ms        *mailer.MailService
-	userRedis *dbEngine.TokenRepo
-	rateLimit *dbEngine.RateRepo
-	cr        *dbEngine.ClientsRepo
+	ur          *dbEngine.Usersrepo
+	mailService *mailer.MailService
+	userRedis   *dbEngine.TokenRepo
+	rateLimit   *dbEngine.RateRepo
+	cr          *dbEngine.ClientsRepo
 }
 
 func main() {
@@ -69,11 +69,11 @@ func main() {
 	clientsRepo := dbEngine.NewClientsRepo(db)
 
 	app := &App{
-		ur:        userRepo,
-		ms:        mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
-		userRedis: userRedis,
-		rateLimit: rateRepo,
-		cr:        clientsRepo,
+		ur:          userRepo,
+		mailService: mailer.NewSmtpService(os.Getenv("MailUser"), os.Getenv("MailPassword"), os.Getenv("MailServer")),
+		userRedis:   userRedis,
+		rateLimit:   rateRepo,
+		cr:          clientsRepo,
 	}
 
 	RegisterRoutes(r, app)

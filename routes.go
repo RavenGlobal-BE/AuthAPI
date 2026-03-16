@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
+	"os"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	logger "raven/auth/Logging"
@@ -32,17 +33,18 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	// Validate client_id exists and is active
+	if loginData.ClientID == "" {
+		c.JSON(400, gin.H{"success": false, "reason": "client_id is required"})
+		return
+	}
+
 	mailValid := mailer.EmailIsValid(loginData.Email)
 	if mailValid == false {
 		c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
 		return
 	}
 
-	// Validate client_id exists and is active
-	if loginData.ClientID == "" {
-		c.JSON(400, gin.H{"success": false, "reason": "client_id is required"})
-		return
-	}
 	client := a.cr.GetClientByID(context.Background(), loginData.ClientID)
 	if client == nil {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid client"})
@@ -52,6 +54,24 @@ func (a *App) handleLogin(c *gin.Context) {
 	user := a.ur.GetAccountByEmail(loginData.Email)
 	if user == nil || user.IsDeleted == 1 {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
+	}
+
+	if user.IsVerified == 0 {
+		key, err := a.userRedis.SignUpInsert(context.Background(), user.Email)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Server error"})
+			return
+		}
+
+		logger.Log("Key inserted: "+key, logger.Debug)
+
+		a.mailService.Send("Verify your account", loginData.Email, "mailVerification", map[string]string{
+			"name": user.FirstName,
+			"link": os.Getenv("FRONTEND_URL") + "/verify?id=" + key,
+		})
+
+		c.JSON(401, gin.H{"success": false, "reason": "verification_pending"})
 		return
 	}
 
@@ -70,10 +90,6 @@ func (a *App) handleLogin(c *gin.Context) {
 	sessionID := *sidPtr
 
 	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, user.CountryCode)
-	if err != nil {
-		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
-		return
-	}
 	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
@@ -337,13 +353,13 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	parsedID, err := strconv.ParseInt(claims.Subject, 10, 32)
+	parsedID, err := strconv.ParseInt(claims.Subject, 10, 64)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
 
-	newAccessToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, claims.Country)
+	newAccessToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, claims.Country)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -356,12 +372,12 @@ func (a *App) refresh(c *gin.Context) {
 		newSidPtr, newSidErr := auth.GenerateToken()
 		if newSidErr == nil {
 			newSessionID := *newSidPtr
-			newRefreshToken, err := auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, claims.Country)
+			newRefreshToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, claims.Country)
 			if err == nil {
-				newAccessToken, _ = auth.GenerateJWTToken(int32(parsedID), claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country)
+				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country)
 				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 				a.userRedis.InsertSession(context.Background(), newSessionID, map[string]interface{}{
-					"user_id": int32(parsedID), "blacklisted": false, "client_id": tokenData["client_id"],
+					"user_id": parsedID, "blacklisted": false, "client_id": tokenData["client_id"],
 				}, 14*24*time.Hour)
 				response["access_token"] = newAccessToken
 				response["refresh_token"] = newRefreshToken
@@ -405,6 +421,10 @@ func (a *App) register(c *gin.Context) {
 
 	logger.Log("Key inserted: "+key, logger.Debug)
 
+	a.mailService.Send("Verify your account", req.Email, "mailVerification", map[string]string{
+		"name": req.FirstName,
+		"link": os.Getenv("FRONTEND_URL") + "/verify?id=" + key,
+	})
 	c.JSON(200, gin.H{"message": "Registered successfully."})
 }
 
@@ -503,14 +523,14 @@ func (a *App) authorize(c *gin.Context) {
 		}
 
 		// Re-issue the access token silently
-		parsedID, parseErr := strconv.ParseInt(refreshClaims.Subject, 10, 32)
+		parsedID, parseErr := strconv.ParseInt(refreshClaims.Subject, 10, 64)
 		if parseErr != nil {
 			c.JSON(500, gin.H{"error": "Server error"})
 			return
 		}
 
 		newAccessToken, tokenErr := auth.GenerateJWTToken(
-			int32(parsedID),
+			parsedID,
 			refreshClaims.Email,
 			refreshClaims.FirstName,
 			refreshClaims.LastName,

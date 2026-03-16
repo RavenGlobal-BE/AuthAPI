@@ -21,7 +21,7 @@ func NewUsersRepo(db *DB) *Usersrepo {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, is_deleted from accounts.users where email = $1`, mail)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, is_deleted, is_verified from accounts.users where email = $1`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
@@ -29,6 +29,7 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 		&v.FirstName,
 		&v.LastName,
 		&v.IsDeleted,
+		&v.IsVerified,
 	)
 
 	if err != nil {
@@ -94,7 +95,7 @@ func (Ur *Usersrepo) VerifyAccount(email string) error {
 }
 
 type UserAuth struct {
-	UserID         int32
+	UserID         int64
 	Email          string
 	Password       string // ArgonID2 (cost 12)
 	FirstName      string
@@ -102,10 +103,11 @@ type UserAuth struct {
 	CountryCode    string
 	PublicUsername *string
 	IsDeleted      int16
+	IsVerified     int16
 }
 
 type User struct {
-	UserID         int32
+	UserID         int64
 	Email          string
 	Password       string // Bycrypted (cost 12)
 	FirstName      string

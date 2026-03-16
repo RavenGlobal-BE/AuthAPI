@@ -9,35 +9,44 @@ import (
 
 type MailService struct {
 	smtpAuth *smtp.Auth
+	host     string
 }
 
 func NewSmtpService(username string, password string, host string) *MailService {
 	auth := smtp.PlainAuth(
 		"",
-		username, //Username
-		password, //Password
-		host,     //Host
+		username,
+		password,
+		host,
 	)
 
 	return &MailService{
 		smtpAuth: &auth,
+		host:     host,
 	}
 }
 
-func (ms *MailService) Send() {
-	htmlBytes, err := os.ReadFile("Mailer/mailVerificationTemplate.html")
+func (ms *MailService) prepareTemplate(template string, data map[string]string) string {
+	htmlBytes, err := os.ReadFile("Mailer/" + template)
 	if err != nil {
 		logger.Log("Unable to read email template: "+err.Error(), logger.Error)
-		return
+		return ""
 	}
 
 	html := string(htmlBytes)
 
-	html = strings.ReplaceAll(html, "{name}", "Farshad")
+	for key, value := range data {
+		html = strings.ReplaceAll(html, "{"+key+"}", value)
+	}
 
-	from := "Raven ONE Account System <no-reply@raven.co.com>"
-	to := "imadamroug89@gmail.com"
-	subject := "Verify your account"
+	return html
+}
+
+func (ms *MailService) Send(subject, recipient, template string, parameters map[string]string) {
+	html := ms.prepareTemplate(template+".html", parameters)
+
+	from := "Raven <no-reply@raven.co.com>"
+	to := recipient
 	htmlBody := html
 
 	message := []byte("From: " + from + "\n" +
@@ -48,8 +57,8 @@ func (ms *MailService) Send() {
 		"\n" +
 		htmlBody)
 
-	err = smtp.SendMail(
-		os.Getenv("MailServer"),
+	err := smtp.SendMail(
+		ms.host+":587",
 		*ms.smtpAuth,
 		"no-reply@raven.co.com",
 		[]string{to},

@@ -7,7 +7,7 @@ This is the brand new system Raven will be using for authentication & authorizat
 ## What does it allow you to do?
 Raven Auth allows you to:
 - Log in
-- Register your account (coming soon)
+- Register your account (along with a verification system)
 - View user settings & modify them (coming soon)
 - Reset your password if they need to (coming soon)
 - Enterprise SSO (coming soon)
