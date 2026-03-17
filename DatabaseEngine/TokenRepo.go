@@ -138,16 +138,22 @@ func (tr *TokenRepo) IsRevoked(ctx context.Context, jti string) bool {
 	return result > 0
 }
 
-// Based on authorization.go GenerateToken since i can't import it due to an "import cycle" error, i have to do it this way.
-func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, error) {
+// Generates a random token string for Redis insertion
+func createToken() string {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
-		return "", err
+		return ""
 	}
 	rawToken := hex.EncodeToString(tokenBytes)
 
 	hash := sha256.Sum256([]byte(rawToken))
-	key := "signup:" + hex.EncodeToString(hash[:])
+	return hex.EncodeToString(hash[:])
+}
+
+// Based on authorization.go GenerateToken since i can't import it due to an "import cycle" error, i have to do it this way.
+func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, error) {
+	token := createToken()
+	key := "signup:" + token
 
 	structure := map[string]interface{}{
 		"email": email,
@@ -161,7 +167,45 @@ func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, er
 		return "", err
 	}
 
-	return hex.EncodeToString(hash[:]), nil
+	return token, nil
+}
+
+func (tr *TokenRepo) ResetInsert(ctx context.Context, email string) (string, error) {
+	token := createToken()
+	key := "reset:" + token
+
+	structure := map[string]interface{}{
+		"email": email,
+	}
+
+	if err := tr.redis.client.HSet(ctx, key, structure).Err(); err != nil {
+		return "", err
+	}
+
+	// 150 minutes = 2.5 hours
+	if err := tr.redis.client.Expire(ctx, key, 150*time.Minute).Err(); err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (tr *TokenRepo) VerifyReset(ctx context.Context, verificationlink string) (map[string]string, error) {
+	key := "reset:" + verificationlink
+
+	data, err := tr.redis.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, errors.New("verification link is invalid or has expired")
+	}
+
+	tr.redis.client.Del(ctx, key)
+
+	return data, nil
 }
 
 // Checks whether the key actually exists

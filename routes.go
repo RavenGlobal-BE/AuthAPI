@@ -447,6 +447,74 @@ func (a *App) logout(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Logged out successfully"})
 }
 
+// Resets the user's password (ONLY BE RAN AFTER THE TOKEN IS GUARENTEED TO BE AVAILABLE)
+func (a *App) resetPassword(c *gin.Context) {
+	var req struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	if req.Token == "" || req.Password == "" {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	data, err := a.userRedis.VerifyReset(context.Background(), req.Token)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	hashedPass, err := auth.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	call := a.ur.ResetPassword(data["email"], hashedPass)
+	if call != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Password reset successfully."})
+}
+
+// Sends an email to the user to reset their password
+func (a *App) requestReset(c *gin.Context) {
+	mail := c.Query("email")
+
+	if !mailer.EmailIsValid(mail) {
+		c.JSON(400, gin.H{"error": "Invalid email"})
+		return
+	}
+
+	user := a.ur.GetAccountByEmail(mail)
+	if user == nil { //If the user isn't found, we don't want to tell them that, so we just return
+		c.JSON(200, gin.H{"message": "Reset email sent successfully."})
+		return
+	}
+
+	key, err := a.userRedis.ResetInsert(context.Background(), mail)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	logger.Log("Key inserted: "+key, logger.Debug)
+
+	a.mailService.Send("Reset your password", mail, "resetPassword", map[string]string{
+		"name": user.FirstName,
+		"link": os.Getenv("FRONTEND_URL") + "/reset?id=" + key,
+	})
+	c.JSON(200, gin.H{"message": "Reset email sent successfully."})
+}
+
 // OIDC GET /authorize endpoint
 // Checks whether the user is authenticated (and still has a valid token).
 func (a *App) authorize(c *gin.Context) {

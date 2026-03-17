@@ -62,6 +62,13 @@ func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	return v
 }
 
+func (Ur *Usersrepo) ResetPassword(email string, password string) error {
+	_, err := Ur.db.pool.Exec(context.Background(), `
+		UPDATE accounts.users SET password = $1 WHERE email = $2;
+	`, password, email)
+	return err
+}
+
 // Puts all your details into the database
 func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
 	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
