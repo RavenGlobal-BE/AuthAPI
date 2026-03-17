@@ -75,10 +75,33 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
-	result := auth.CheckPasswordHash(loginData.Password, user.Password)
-	if result == false {
-		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+	if strings.HasPrefix(user.Password, "$2b$") || strings.HasPrefix(user.Password, "$2a$") || strings.HasPrefix(user.Password, "$2y$") {
+		oldHash, err := auth.HashLegacyPassword(loginData.Password)
+		if err != nil {
+			logger.Log(err.Error(), logger.Error)
+			c.JSON(500, gin.H{"success": false, "reason": "Server error"})
+		}
+
+		result := auth.CheckLegacyHash(oldHash, user.Password)
+		if result == false {
+			c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		}
+
+		newHash, err := auth.HashPassword(loginData.Password)
+		err = a.ur.ResetPassword(user.Email, newHash)
+		if err != nil {
+			logger.Log(err.Error(), logger.Error)
+			c.JSON(500, gin.H{"success": false, "reason": "Server error"})
+		}
+
 		return
+
+	} else {
+		result := auth.CheckPasswordHash(loginData.Password, user.Password)
+		if result == false {
+			c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+			return
+		}
 	}
 
 	// Generate sessionID first — embedded in both tokens, used as the Redis key

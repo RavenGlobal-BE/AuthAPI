@@ -93,6 +93,8 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.POST("/login", auth.RateLimiting(app.rateLimit), app.handleLogin)
 	router.POST("/register", auth.RateLimiting(app.rateLimit), app.register)
 	router.GET("/verify", auth.RateLimiting(app.rateLimit), app.verify)
+	router.GET("/requestReset", auth.RateLimiting(app.rateLimit), app.requestReset)
+	router.POST("/reset", auth.RateLimiting(app.rateLimit), app.resetPassword)
 
 	//Token checker
 	router.POST("/introspect", app.introspect)
