@@ -53,7 +53,7 @@ jobs:
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          version: 1.96.2
+          version: 1.62.1
 
       # 2. Run the Deployment Script via SSH over the VPN
       - name: Blue/Green Deploy to OVH
