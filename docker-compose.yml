@@ -19,17 +19,17 @@ services:
   auth:
     build:
       context: .
-      dockerfile: DockerFile
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     depends_on:
       - postgres
       - redis
-    environment:
-      - DATABASE_URL=postgres://postgres:6464@postgres:5432/prod?sslmode=disable
-      - RedisHost=redis
-      - RedisPort=6379
-      - RedisPassword=
+#    environment:
+#      - DATABASE_URL=postgres://postgres:6464@postgres:5432/prod?sslmode=disable
+#      - RedisHost=redis
+#      - RedisPort=6379
+#      - RedisPassword=
 
 volumes:
   postgres_data:
