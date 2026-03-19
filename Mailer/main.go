@@ -1,11 +1,17 @@
 package mailer
 
 import (
+	_ "embed"
 	"net/smtp"
-	"os"
 	logger "raven/auth/Logging"
 	"strings"
 )
+
+//go:embed mailVerification.html
+var mailVerificationTemplate string
+
+//go:embed resetPassword.html
+var resetPasswordTemplate string
 
 type MailService struct {
 	smtpAuth *smtp.Auth
@@ -26,15 +32,19 @@ func NewSmtpService(username string, password string, host string) *MailService 
 	}
 }
 
-func (ms *MailService) prepareTemplate(template string, data map[string]string) string {
-	htmlBytes, err := os.ReadFile("Mailer/" + template)
-	if err != nil {
-		logger.Log("Unable to read email template: "+err.Error(), logger.Error)
+var templates = map[string]string{
+	"mailVerification": mailVerificationTemplate,
+	"resetPassword":    resetPasswordTemplate,
+}
+
+func (ms *MailService) prepareTemplate(templateName string, data map[string]string) string {
+	raw, ok := templates[templateName]
+	if !ok {
+		logger.Log("Unknown email template: "+templateName, logger.Error)
 		return ""
 	}
 
-	html := string(htmlBytes)
-
+	html := raw
 	for key, value := range data {
 		html = strings.ReplaceAll(html, "{"+key+"}", value)
 	}
@@ -43,7 +53,7 @@ func (ms *MailService) prepareTemplate(template string, data map[string]string) 
 }
 
 func (ms *MailService) Send(subject, recipient, template string, parameters map[string]string) {
-	html := ms.prepareTemplate(template+".html", parameters)
+	html := ms.prepareTemplate(template, parameters)
 
 	from := "Raven <no-reply@raven.co.com>"
 	to := recipient
