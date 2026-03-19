@@ -32,7 +32,6 @@ jobs:
         with:
           context: .
           push: true
-          # Tags the image with both 'latest' AND your specific release version (e.g., v1.0.0)
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
@@ -41,10 +40,18 @@ jobs:
     needs: build-and-push
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
+      # --- NEW STEP: Connect the runner to your VPN ---
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
+      # --- This stays exactly the same! ---
       - name: Blue/Green Deploy to OVH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.OVH_HOST }}
+          host: ${{ secrets.OVH_HOST }} # This is now securely aiming at your 100.x.x.x IP!
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
@@ -68,9 +75,11 @@ jobs:
               fi
             fi
             
-            # 3. Spin up the new container with the exact release tag
-            # NOTE: If you used Method 1 for your .env file, add the --env-file flag here!
-            docker run -d --name my-go-api-$NEW_COLOR -p 127.0.0.1:$NEW_PORT:3000 ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            # 3. Spin up the new container (WITH the .env file injected!)
+            docker run -d --name my-go-api-$NEW_COLOR \
+              --env-file /home/debian/go-api/.env \
+              -p 127.0.0.1:$NEW_PORT:3000 \
+              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             
             # 4. Wait for the Go API to boot up
             sleep 5
