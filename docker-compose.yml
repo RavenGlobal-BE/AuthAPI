@@ -25,6 +25,8 @@ services:
     depends_on:
       - postgres
       - redis
+    networks:
+      - main
 #    environment:
 #      - DATABASE_URL=postgres://postgres:6464@postgres:5432/prod?sslmode=disable
 #      - RedisHost=redis
@@ -33,3 +35,9 @@ services:
 
 volumes:
   postgres_data:
+
+
+networks:
+  main:
+    external: true
+    name: Main
