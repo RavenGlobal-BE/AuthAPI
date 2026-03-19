@@ -1,0 +1,88 @@
+name: Go API CI/CD
+
+on:
+  push:
+    tags:
+      - 'v*' # This triggers the workflow ONLY when you push a tag like v1.0.0, v1.0.1, etc.
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Tags the image with both 'latest' AND your specific release version (e.g., v1.0.0)
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - name: Blue/Green Deploy to OVH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OVH_HOST }}
+          username: ${{ secrets.OVH_USERNAME }}
+          key: ${{ secrets.OVH_SSH_KEY }}
+          script: |
+            # 1. Pull the EXACT version you just released
+            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            
+            # 2. Figure out which container/port is currently running
+            CURRENT_CONTAINER=$(docker ps -q --filter "name=^my-go-api-")
+            
+            if [ -z "$CURRENT_CONTAINER" ]; then
+              NEW_PORT=3000
+              NEW_COLOR="blue"
+            else
+              CURRENT_PORT=$(docker port $CURRENT_CONTAINER 3000 | cut -d ':' -f 2)
+              if [ "$CURRENT_PORT" == "3000" ]; then
+                NEW_PORT=3002
+                NEW_COLOR="green"
+              else
+                NEW_PORT=3000
+                NEW_COLOR="blue"
+              fi
+            fi
+            
+            # 3. Spin up the new container with the exact release tag
+            # NOTE: If you used Method 1 for your .env file, add the --env-file flag here!
+            docker run -d --name my-go-api-$NEW_COLOR -p 127.0.0.1:$NEW_PORT:3000 ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            
+            # 4. Wait for the Go API to boot up
+            sleep 5
+            
+            # 5. Update Nginx to point to the new port
+            echo "upstream go_api_backend { server 127.0.0.1:$NEW_PORT; }" | sudo tee /etc/nginx/conf.d/go-api-upstream.conf
+            
+            # 6. Reload Nginx gracefully (Zero downtime!)
+            sudo systemctl reload nginx
+            
+            # 7. Safely remove the old container
+            if [ -n "$CURRENT_CONTAINER" ]; then
+              docker stop $CURRENT_CONTAINER
+              docker rm $CURRENT_CONTAINER
+            fi
