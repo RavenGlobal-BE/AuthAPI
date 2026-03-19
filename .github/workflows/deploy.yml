@@ -67,7 +67,7 @@ jobs:
             docker pull ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
             # Identify current production container
-            CURRENT_CONTAINER=$(docker ps -q --filter "name=^my-go-api-")
+            CURRENT_CONTAINER=$(docker ps -q --filter "name=my-go-api-")
             
             if [ -z "$CURRENT_CONTAINER" ]; then
               NEW_PORT=3000
