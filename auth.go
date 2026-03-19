@@ -35,6 +35,8 @@ func main() {
 		logging.Log("Warning: .env file not found", logging.Warning)
 	}
 
+	displayConfigs()
+
 	gin.SetMode(gin.ReleaseMode)
 	//r := gin.Default() //Debugging
 	r := gin.New() //Production
@@ -112,4 +114,18 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	//Personalization
 	router.GET("/todayBG", app.todayBG)
 	router.GET("/clientInfo", app.clientInfo)
+}
+
+func displayConfigs() {
+	logging.Log(fmt.Sprintf("Build: %f", config.Build), logging.Debug)
+	logging.Log(fmt.Sprintf("Port: %d", config.Port), logging.Debug)
+	logging.Log(fmt.Sprintf("CDN Endpoint: %s", config.CdnEndpoint), logging.Debug)
+
+	logging.Log(fmt.Sprintf("Database URL: %s", os.Getenv("DATABASE_URL")), logging.Debug)
+	logging.Log(fmt.Sprintf("Redis Host: %s", os.Getenv("RedisHost")), logging.Debug)
+	logging.Log(fmt.Sprintf("Redis Port: %s", os.Getenv("RedisPort")), logging.Debug)
+	logging.Log(fmt.Sprintf("Redis Password: %s", os.Getenv("RedisPassword")), logging.Debug)
+	logging.Log(fmt.Sprintf("Mail User: %s", os.Getenv("MailUser")), logging.Debug)
+	logging.Log(fmt.Sprintf("Mail Password: %s", os.Getenv("MailPassword")), logging.Debug)
+	logging.Log(fmt.Sprintf("Mail Server: %s", os.Getenv("MailServer")), logging.Debug)
 }
