@@ -3,11 +3,10 @@ name: Go API CI/CD
 on:
   push:
     tags:
-      - 'v*' # Triggers on v1.0, v2.0-beta, etc.
+      - 'v*'
 
 env:
   REGISTRY: ghcr.io
-  # MUST be lowercase for Docker/GHCR compatibility
   IMAGE_NAME: ravenglobal-be/authapi 
 
 jobs:
@@ -32,7 +31,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          # If your file is named 'DockerFile', change this to ./DockerFile
+          # Using the standard naming we fixed earlier
           file: ./Dockerfile 
           push: true
           tags: |
@@ -43,22 +42,22 @@ jobs:
     needs: build-and-push
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      # 1. Connect to your Private Tailscale Network
+      # 1. Connect to Tailscale using the Auth Key (The "Golden Ticket")
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }} # Using the Golden Ticket
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: 1.62.1
 
       # 2. Run the Deployment Script via SSH over the VPN
       - name: Blue/Green Deploy to OVH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.OVH_HOST }} # This should be your 100.x.x.x Tailscale IP
+          host: ${{ secrets.OVH_HOST }} # Your 100.x.x.x Tailscale IP
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
-            # Pull the new image
+            # Pull the new image (using the lowercase name)
             docker pull ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
             # Identify current production container
