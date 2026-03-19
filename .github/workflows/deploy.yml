@@ -61,17 +61,14 @@ jobs:
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
-            # 1. Pull the new image
             docker pull ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
 
-            # 2. Determine Blue or Green
             CURRENT_CONTAINER=$(docker ps -q --filter "name=my-go-api-")
 
             if [ -z "$CURRENT_CONTAINER" ]; then
               NEW_PORT=3000
               NEW_COLOR="blue"
             else
-              # Check which port the current one is using
               CURRENT_PORT=$(docker port $CURRENT_CONTAINER 3000 | cut -d ':' -f 2)
               if [ "$CURRENT_PORT" == "3000" ]; then
                 NEW_PORT=3002
@@ -82,18 +79,18 @@ jobs:
               fi
             fi
 
-            # 3. Cleanup any old/dead containers with the target name
+            # --- THE ENV FIX: Strip all double quotes from the .env file automatically ---
+            sed -i 's/"//g' /home/debian/go-api/.env
+
             docker ps -aq --filter "name=my-go-api-$NEW_COLOR" | xargs -r docker rm -f
 
-            # 4. Start the new version 
-            # Note: Added -v mount to fix the ".env not found" panic
+            # --- THE NETWORK FIX: Added --network Main ---
             docker run -d --name my-go-api-$NEW_COLOR \
+              --network Main \
               --env-file /home/debian/go-api/.env \
-              -v /home/debian/go-api/.env:/app/.env:ro \
               -p 127.0.0.1:$NEW_PORT:3000 \
               ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
 
-            # 5. Instant Crash Check (Don't wait 30s if it's already dead)
             sleep 3
             if ! docker ps -q --filter "name=my-go-api-$NEW_COLOR" --filter "status=running" > /dev/null; then
               echo "CRITICAL: Container crashed immediately. Logs below:"
@@ -101,7 +98,6 @@ jobs:
               exit 1
             fi
 
-            # 6. Healthcheck Loop
             echo "Waiting for /about endpoint to respond on port $NEW_PORT..."
             for i in $(seq 1 30); do
               if curl -sf http://127.0.0.1:$NEW_PORT/about > /dev/null 2>&1; then
@@ -119,11 +115,9 @@ jobs:
               exit 1
             fi
 
-            # 7. Hot-swap Nginx
             echo "upstream go_api_backend { server 127.0.0.1:$NEW_PORT; }" | sudo tee /etc/nginx/conf.d/go-api-upstream.conf
             sudo systemctl reload nginx
 
-            # 8. Cleanup old version
             if [ -n "$CURRENT_CONTAINER" ]; then
               docker stop $CURRENT_CONTAINER
               docker rm $CURRENT_CONTAINER
