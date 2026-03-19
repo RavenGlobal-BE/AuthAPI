@@ -3,11 +3,12 @@ name: Go API CI/CD
 on:
   push:
     tags:
-      - 'v*' # This triggers the workflow ONLY when you push a tag like v1.0.0, v1.0.1, etc.
+      - 'v*'
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # 1. FIXED: Hardcoded to strict lowercase
+  IMAGE_NAME: ravenglobal-be/authapi 
 
 jobs:
   build-and-push:
@@ -40,25 +41,16 @@ jobs:
     needs: build-and-push
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      # --- NEW STEP: Connect the runner to your VPN ---
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v2
-        with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          version: latest
-
-      # --- This stays exactly the same! ---
       - name: Blue/Green Deploy to OVH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.OVH_HOST }} # This is now securely aiming at your 100.x.x.x IP!
+          host: ${{ secrets.OVH_HOST }}
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
-            # 1. Pull the EXACT version you just released
-            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            # 2. FIXED: Using the lowercase name here too
+            docker pull ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
-            # 2. Figure out which container/port is currently running
             CURRENT_CONTAINER=$(docker ps -q --filter "name=^my-go-api-")
             
             if [ -z "$CURRENT_CONTAINER" ]; then
@@ -75,22 +67,18 @@ jobs:
               fi
             fi
             
-            # 3. Spin up the new container (WITH the .env file injected!)
+            # 3. FIXED: And using the lowercase name for the run command
             docker run -d --name my-go-api-$NEW_COLOR \
               --env-file /home/debian/go-api/.env \
               -p 127.0.0.1:$NEW_PORT:3000 \
-              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+              ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
-            # 4. Wait for the Go API to boot up
             sleep 5
             
-            # 5. Update Nginx to point to the new port
             echo "upstream go_api_backend { server 127.0.0.1:$NEW_PORT; }" | sudo tee /etc/nginx/conf.d/go-api-upstream.conf
             
-            # 6. Reload Nginx gracefully (Zero downtime!)
             sudo systemctl reload nginx
             
-            # 7. Safely remove the old container
             if [ -n "$CURRENT_CONTAINER" ]; then
               docker stop $CURRENT_CONTAINER
               docker rm $CURRENT_CONTAINER
