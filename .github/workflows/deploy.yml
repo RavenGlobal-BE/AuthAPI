@@ -3,10 +3,11 @@ name: Go API CI/CD
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' # Triggers on v1.0, v2.0-beta, etc.
 
 env:
   REGISTRY: ghcr.io
+  # MUST be lowercase for Docker/GHCR compatibility
   IMAGE_NAME: ravenglobal-be/authapi 
 
 jobs:
@@ -31,6 +32,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          # If your file is named 'DockerFile', change this to ./DockerFile
+          file: ./Dockerfile 
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
@@ -40,23 +43,27 @@ jobs:
     needs: build-and-push
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      # --- THE MISSING LINK: Connect the runner to your VPN first! ---
+      # 1. Connect to your Private Tailscale Network
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          version: latest
+          oauth-client-id: ${{ secrets.TS_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_CLIENT_SECRET }}
+          tags: tag:ci
+          version: 1.62.1
 
-      # --- Now it can actually see your 100.x.x.x IP address ---
+      # 2. Run the Deployment Script via SSH over the VPN
       - name: Blue/Green Deploy to OVH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.OVH_HOST }}
+          host: ${{ secrets.OVH_HOST }} # This should be your 100.x.x.x Tailscale IP
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
+            # Pull the new image
             docker pull ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
+            # Identify current production container
             CURRENT_CONTAINER=$(docker ps -q --filter "name=^my-go-api-")
             
             if [ -z "$CURRENT_CONTAINER" ]; then
@@ -73,17 +80,20 @@ jobs:
               fi
             fi
             
+            # Start the new version
             docker run -d --name my-go-api-$NEW_COLOR \
               --env-file /home/debian/go-api/.env \
               -p 127.0.0.1:$NEW_PORT:3000 \
               ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
+            # Health check buffer
             sleep 5
             
+            # Hot-swap Nginx upstream
             echo "upstream go_api_backend { server 127.0.0.1:$NEW_PORT; }" | sudo tee /etc/nginx/conf.d/go-api-upstream.conf
-            
             sudo systemctl reload nginx
             
+            # Cleanup old version
             if [ -n "$CURRENT_CONTAINER" ]; then
               docker stop $CURRENT_CONTAINER
               docker rm $CURRENT_CONTAINER
