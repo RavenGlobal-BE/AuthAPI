@@ -7,7 +7,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # 1. FIXED: Hardcoded to strict lowercase
   IMAGE_NAME: ravenglobal-be/authapi 
 
 jobs:
@@ -41,6 +40,14 @@ jobs:
     needs: build-and-push
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
+      # --- THE MISSING LINK: Connect the runner to your VPN first! ---
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+
+      # --- Now it can actually see your 100.x.x.x IP address ---
       - name: Blue/Green Deploy to OVH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -48,7 +55,6 @@ jobs:
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
-            # 2. FIXED: Using the lowercase name here too
             docker pull ghcr.io/ravenglobal-be/authapi:${{ github.ref_name }}
             
             CURRENT_CONTAINER=$(docker ps -q --filter "name=^my-go-api-")
@@ -67,7 +73,6 @@ jobs:
               fi
             fi
             
-            # 3. FIXED: And using the lowercase name for the run command
             docker run -d --name my-go-api-$NEW_COLOR \
               --env-file /home/debian/go-api/.env \
               -p 127.0.0.1:$NEW_PORT:3000 \
