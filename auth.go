@@ -56,7 +56,7 @@ func main() {
 			break
 		}
 		if !strings.Contains(err.Error(), "57P03") {
-			panic(err) // real error, not a startup race
+			logging.Log(err.Error(), logging.Error)
 		}
 		logging.Log("Postgres is starting up, retrying in 15 seconds...", logging.Warning)
 		time.Sleep(15 * time.Second)

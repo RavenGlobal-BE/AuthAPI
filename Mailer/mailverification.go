@@ -28,6 +28,8 @@ func EmailIsValid(email string) bool {
 	switch domain {
 	case "gmail.com":
 		return !strings.Contains(user, "+")
+	case "yahoo.com":
+		return !strings.Contains(user, "!")
 	}
 
 	return true
