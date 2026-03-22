@@ -8,7 +8,7 @@ var AllowVerbose bool = true
 
 // Version & Build
 var Version = "2.0"
-var Build float32 = 11
+var Build float32 = 12
 
 // Server configurations
 var Port int = 3000
