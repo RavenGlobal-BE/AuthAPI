@@ -52,9 +52,12 @@ func main() {
 	userRepo := dbEngine.NewUsersRepo(db)
 	for {
 		err = userRepo.Init()
-		if err == nil { //connected Successfully
+		if err != nil {
+			logging.Log(err.Error(), logging.Error)
+		} else {
 			break
 		}
+
 		if !strings.Contains(err.Error(), "57P03") {
 			logging.Log(err.Error(), logging.Error)
 		}

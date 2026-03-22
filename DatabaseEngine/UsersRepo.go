@@ -126,6 +126,10 @@ type User struct {
 }
 
 func (Ur *Usersrepo) Init() error {
+	if err := Ur.db.Ping(context.Background()); err != nil {
+		return err
+	}
+
 	for _, step := range []func() error{
 		Ur.SetupSchema,
 		Ur.SetupUsersTable,
