@@ -21,13 +21,15 @@ func NewUsersRepo(db *DB) *Usersrepo {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, is_deleted, is_verified from accounts.users where email = $1`, mail)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, is_deleted, is_verified from accounts.users where email = $1`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
 		&v.LastName,
+		&v.PublicUsername,
+		&v.CountryCode,
 		&v.IsDeleted,
 		&v.IsVerified,
 	)
@@ -42,7 +44,7 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, is_deleted from accounts.users where user_id = $1`, id)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, is_verified from accounts.users where user_id = $1`, id)
 
 	err := row.Scan(
 		&v.UserID,
@@ -52,7 +54,7 @@ func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
 		&v.LastName,
 		&v.PublicUsername,
 		&v.CountryCode,
-		&v.IsDeleted,
+		&v.IsVerified,
 	)
 
 	if err != nil {
@@ -71,6 +73,7 @@ func (Ur *Usersrepo) ResetPassword(email string, password string) error {
 
 // Puts all your details into the database
 func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
+	logger.Log(fmt.Sprintf("Registering account: %s, %s, %s, %s", email, firstName, countryCode, username), logger.Debug)
 	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
 		return errors.New("Invalid request")
 	}

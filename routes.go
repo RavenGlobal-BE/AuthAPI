@@ -21,10 +21,11 @@ import (
 // Returns both a Bearer token & a refresh token
 func (a *App) handleLogin(c *gin.Context) {
 	var loginData struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Nonce    string `json:"nonce"`
-		ClientID string `json:"client_id"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		Nonce       string `json:"nonce"`
+		ClientID    string `json:"client_id"`
+		RedirectURI string `json:"redirect_uri"`
 	}
 
 	err := c.ShouldBindJSON(&loginData)
