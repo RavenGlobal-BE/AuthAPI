@@ -73,7 +73,6 @@ func (Ur *Usersrepo) ResetPassword(email string, password string) error {
 
 // Puts all your details into the database
 func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
-	logger.Log(fmt.Sprintf("Registering account: %s, %s, %s, %s", email, firstName, countryCode, username), logger.Debug)
 	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
 		return errors.New("Invalid request")
 	}

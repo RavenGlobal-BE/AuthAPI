@@ -52,6 +52,11 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	if client.IsPublic == false && client.RedirectURI != loginData.RedirectURI {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid redirect URI"})
+		return
+	}
+
 	user := a.ur.GetAccountByEmail(loginData.Email)
 	if user == nil || user.IsDeleted == 1 {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
