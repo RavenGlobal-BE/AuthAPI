@@ -18,6 +18,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+var BuildDate string
+
 // Returns both a Bearer token & a refresh token
 func (a *App) handleLogin(c *gin.Context) {
 	var loginData struct {
@@ -210,7 +212,11 @@ func (a *App) dbtest(c *gin.Context) { //Tests user authentication
 
 // Shows the user the current version of the API
 func handleAbout(c *gin.Context) {
-	c.JSON(200, gin.H{"about": fmt.Sprintf("v%s (build %.1f)", config.Version, config.Build)})
+	c.JSON(200, gin.H{
+		"version":    config.Version,
+		"build":      config.Build,
+		"build_date": BuildDate,
+	})
 }
 
 // Checks whether the token is still valid and not blacklisted.

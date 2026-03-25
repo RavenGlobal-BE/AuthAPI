@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 
 # Build a standalone, statically linked binary named 'auth'
-RUN CGO_ENABLED=0 GOOS=linux go build -o auth .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-X main.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o auth .
 
 # Stage 2: The Runner (Tiny, secure, no source code)
 FROM alpine:latest
