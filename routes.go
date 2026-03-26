@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/url"
-	"os"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	logger "raven/auth/Logging"
@@ -28,6 +27,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		Nonce       string `json:"nonce"`
 		ClientID    string `json:"client_id"`
 		RedirectURI string `json:"redirect_uri"`
+		Language    string `json:"language"`
 	}
 
 	err := c.ShouldBindJSON(&loginData)
@@ -74,11 +74,7 @@ func (a *App) handleLogin(c *gin.Context) {
 
 		logger.Log("Key inserted: "+key, logger.Debug)
 
-		a.mailService.Send("Verify your account", loginData.Email, "mailVerification", map[string]string{
-			"name": user.FirstName,
-			"link": os.Getenv("FRONTEND_URL") + "/verify?id=" + key,
-		})
-
+		a.mailService.AccountVerificationEmail(loginData.Email, user.FirstName, key, loginData.Language)
 		c.JSON(401, gin.H{"success": false, "reason": "verification_pending"})
 		return
 	}
@@ -431,6 +427,7 @@ func (a *App) register(c *gin.Context) {
 		LastName    string `json:"last_name"`
 		Username    string `json:"username"`
 		CountryCode string `json:"country_code"`
+		Language    string `json:"language"` //This is a 2 letter code
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -456,10 +453,7 @@ func (a *App) register(c *gin.Context) {
 
 	logger.Log("Key inserted: "+key, logger.Debug)
 
-	a.mailService.Send("Verify your account", req.Email, "mailVerification", map[string]string{
-		"name": req.FirstName,
-		"link": os.Getenv("FRONTEND_URL") + "/verify?id=" + key,
-	})
+	a.mailService.AccountVerificationEmail(req.Email, req.FirstName, key, req.Language)
 	c.JSON(200, gin.H{"message": "Registered successfully."})
 }
 
@@ -523,7 +517,7 @@ func (a *App) resetPassword(c *gin.Context) {
 // Sends an email to the user to reset their password
 func (a *App) requestReset(c *gin.Context) {
 	mail := c.Query("email")
-
+	language := c.Query("lang")
 	if !mailer.EmailIsValid(mail) {
 		c.JSON(400, gin.H{"error": "Invalid email"})
 		return
@@ -543,10 +537,7 @@ func (a *App) requestReset(c *gin.Context) {
 
 	logger.Log("Key inserted: "+key, logger.Debug)
 
-	a.mailService.Send("Reset your password", mail, "resetPassword", map[string]string{
-		"name": user.FirstName,
-		"link": os.Getenv("FRONTEND_URL") + "/reset?id=" + key,
-	})
+	a.mailService.ResetPasswordEmail(mail, user.FirstName, key, language)
 	c.JSON(200, gin.H{"message": "Reset email sent successfully."})
 }
 
