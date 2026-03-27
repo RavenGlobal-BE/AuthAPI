@@ -48,7 +48,7 @@ func getPublicKey() (ed25519.PublicKey, error) {
 	return ed25519.PublicKey(keyBytes), nil
 }
 
-func GenerateJWTToken(userID int64, email string, firstName string, lastName string, access string, expiration time.Time, nonce string, sessionID string, country string) (string, error) {
+func GenerateJWTToken(userID int64, email, firstName, lastName, access string, expiration time.Time, nonce, sessionID, country, audience string) (string, error) {
 	tokenID, err := GenerateToken()
 	if err != nil {
 		return "", err
@@ -110,6 +110,14 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 
 		if claims.Audience == nil || claims.Audience[0] != "Raven-Original" { // Check whether the token is really meant for "Raven Original" services.
 			return nil, errors.New("invalid token audience")
+		}
+
+		if claims.ExpiresAt.Before(time.Now()) { //Checks whether the token is expired
+			return nil, errors.New("token has expired")
+		}
+
+		if claims.TokenType != "access" && claims.TokenType != "refresh" { //Checks whether it's a valid type of token
+			return nil, errors.New("invalid token type")
 		}
 
 		return publicKey, nil

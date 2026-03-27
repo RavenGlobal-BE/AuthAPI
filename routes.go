@@ -122,8 +122,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 	sessionID := *sidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode)
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, loginData.ClientID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, loginData.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
@@ -222,7 +222,7 @@ func handleAbout(c *gin.Context) {
 	})
 }
 
-// Checks whether the token is still valid and not blacklisted.
+// Checks whether the token is still valid and not blacklisted. Only use it on sensitive operations
 func (a *App) introspect(c *gin.Context) {
 	var data struct {
 		AccessToken string `json:"token"`
@@ -344,12 +344,12 @@ func (a *App) token(c *gin.Context) {
 	}
 	tokenSessionID := *tokenSidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, clientID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, clientID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -397,7 +397,7 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	newAccessToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, claims.Country)
+	newAccessToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, claims.Country, claims.Audience[0])
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -410,9 +410,9 @@ func (a *App) refresh(c *gin.Context) {
 		newSidPtr, newSidErr := auth.GenerateToken()
 		if newSidErr == nil {
 			newSessionID := *newSidPtr
-			newRefreshToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, claims.Country)
+			newRefreshToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, claims.Country, claims.Audience[0])
 			if err == nil {
-				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country)
+				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country, claims.Audience[0])
 				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 				a.userRedis.InsertSession(context.Background(), newSessionID, map[string]interface{}{
 					"user_id": parsedID, "blacklisted": false, "client_id": tokenData["client_id"],
@@ -640,6 +640,7 @@ func (a *App) authorize(c *gin.Context) {
 			nonce,
 			refreshClaims.SessionID,
 			refreshClaims.Country,
+			refreshClaims.Audience[0],
 		)
 		if tokenErr != nil {
 			c.JSON(500, gin.H{"error": "Server error"})
