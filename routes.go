@@ -36,6 +36,8 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	setup := []string{}
+
 	// Validate client_id exists and is active
 	if loginData.ClientID == "" {
 		c.JSON(400, gin.H{"success": false, "reason": "client_id is required"})
@@ -63,6 +65,10 @@ func (a *App) handleLogin(c *gin.Context) {
 	if user == nil || user.IsDeleted == 1 {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
+	}
+
+	if user.CountryCode == nil || *user.CountryCode == "" {
+		setup = append(setup, "countryCode")
 	}
 
 	if user.IsVerified == 0 {
@@ -116,8 +122,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 	sessionID := *sidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, user.CountryCode)
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, user.CountryCode)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
@@ -140,6 +146,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
 		"token_type":    "Bearer",
+		"additional":    setup,
 	})
 
 }
@@ -337,12 +344,12 @@ func (a *App) token(c *gin.Context) {
 	}
 	tokenSessionID := *tokenSidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, user.CountryCode)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, user.CountryCode)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -679,4 +686,21 @@ func (a *App) authorize(c *gin.Context) {
 	// Redirect back to the third-party app with the auth code
 	redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
 	c.Redirect(302, redirect)
+}
+
+func (a *App) setCountryCode(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+
+	if exists != true {
+		c.JSON(400, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	user := a.ur.GetAccountById(userID.(int))
+
+	if user == nil {
+		c.JSON(404, gin.H{"error": "user not found"})
+		return
+	}
+	c.JSON(200, gin.H{"user": &user})
 }

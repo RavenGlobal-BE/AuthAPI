@@ -71,12 +71,17 @@ func (Ur *Usersrepo) ResetPassword(email string, password string) error {
 	return err
 }
 
+func snowflakeFromTime(t time.Time, nodeID int64, seq int64) int64 {
+	ms := t.UnixMilli() - 1748736000000
+	return (ms << 22) | (nodeID << 12) | seq
+}
+
 // Puts all your details into the database
 func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
 	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
 		return errors.New("Invalid request")
 	}
-
+	snowflake.Epoch = 1748736000000
 	node, err := snowflake.NewNode(1)
 	if err != nil {
 		fmt.Println(err)
@@ -109,7 +114,7 @@ type UserAuth struct {
 	Password       string // ArgonID2 (cost 12)
 	FirstName      string
 	LastName       string
-	CountryCode    string
+	CountryCode    *string
 	PublicUsername *string
 	IsDeleted      int16
 	IsVerified     int16
@@ -173,6 +178,11 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 
 	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
 		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS is_verified SMALLINT NOT NULL DEFAULT 0;`,
+		schema, table,
+	))
+
+	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS countrycode VARCHAR(5) NULL;`,
 		schema, table,
 	))
 

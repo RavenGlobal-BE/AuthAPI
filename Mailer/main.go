@@ -84,8 +84,21 @@ func (ms *MailService) Send(subject, recipient, template string, parameters map[
 }
 
 func (ms *MailService) AccountVerificationEmail(recipient, name, token, lang string) {
+	subjects := map[string]string{
+		"en": "Verify your account",
+		"ar": "تأكيد حسابك",
+		"fi": "Vahvista tilisi",
+		"fr": "Vérifier votre compte",
+		"es": "Verificar tu cuenta",
+	}
+
+	subject, ok := subjects[lang]
+	if !ok {
+		subject = subjects["en"]
+	}
+
 	ms.Send(
-		"Verify your account",
+		subject,
 		recipient,
 		"mailVerification",
 		map[string]string{"name": name, "link": fmt.Sprintf("%s/%s/verify?code=%s", os.Getenv("FRONTEND_URL"), lang, token)},

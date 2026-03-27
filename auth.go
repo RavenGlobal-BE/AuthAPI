@@ -117,6 +117,8 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	//Personalization
 	router.GET("/todayBG", app.todayBG)
 	router.GET("/clientInfo", app.clientInfo)
+
+	router.POST("/countryCode", auth.JWTAuthMiddleware(), app.setCountryCode)
 }
 
 func displayConfigs() {
