@@ -6,6 +6,9 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -85,4 +88,30 @@ func GenerateToken() (*string, error) {
 	hashedToken := hex.EncodeToString(hash[:])
 
 	return &hashedToken, nil
+}
+
+// Gets location information from IP
+func GetIPLocation(ip string) (map[string]interface{}, error) {
+	url := "http://ip-api.com/json/" + ip
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var data map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, fmt.Errorf("error decoding json: %w", err)
+	}
+
+	var formattedData = map[string]interface{}{
+		"country": data["countryCode"],
+		"city":    data["regionName"],
+		"lat":     data["lat"],
+		"lon":     data["lon"],
+		"carrier": data["isp"],
+	}
+
+	return formattedData, nil
 }

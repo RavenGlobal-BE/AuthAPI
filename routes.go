@@ -29,6 +29,9 @@ func (a *App) handleLogin(c *gin.Context) {
 		ClientID    string `json:"client_id"`
 		RedirectURI string `json:"redirect_uri"`
 		Language    string `json:"language"`
+
+		DeviceModel string `json:"device_model"`
+		DeviceName  string `json:"device_name"`
 	}
 
 	err := c.ShouldBindJSON(&loginData)
@@ -73,6 +76,7 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	if user.IsVerified == 0 {
+		//SignUpInsert simulates a signup process to send the user their verification email.
 		key, err := a.userRedis.SignUpInsert(context.Background(), user.Email)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Server error"})
@@ -86,6 +90,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	//Backwards compatibility layer for users who are still on the old bcrypt system.
 	if strings.HasPrefix(user.Password, "$2b$") || strings.HasPrefix(user.Password, "$2a$") || strings.HasPrefix(user.Password, "$2y$") {
 		oldHash, err := auth.HashLegacyPassword(loginData.Password)
 		if err != nil {
@@ -130,14 +135,29 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	location, err := auth.GetIPLocation(c.ClientIP())
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+	}
+
 	sessionData := map[string]interface{}{
+		//Required info
 		"user_id":     user.UserID,
 		"blacklisted": false,
 		"client_id":   loginData.ClientID,
+
+		//Device information
+		"device_model": loginData.DeviceModel,
+		"device_name":  loginData.DeviceName,
+		"language":     loginData.Language,
+		"location":     location,
 	}
 
+	//New redis session key
+	var sessionKey = "session:" + strconv.FormatInt(int64(user.UserID), 10) + ":" + sessionID
+
 	// Store session under raw sessionID — no hashing
-	a.userRedis.InsertSession(context.Background(), sessionID, sessionData, 14*24*time.Hour)
+	a.userRedis.InsertSession(context.Background(), sessionKey, sessionData, 14*24*time.Hour)
 
 	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
 	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
@@ -690,6 +710,23 @@ func (a *App) authorize(c *gin.Context) {
 }
 
 func (a *App) setCountryCode(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+
+	if exists != true {
+		c.JSON(400, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	user := a.ur.GetAccountById(userID.(int))
+
+	if user == nil {
+		c.JSON(404, gin.H{"error": "user not found"})
+		return
+	}
+	c.JSON(200, gin.H{"user": &user})
+}
+
+func (a *App) devices(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 
 	if exists != true {

@@ -42,7 +42,7 @@ func main() {
 	r := gin.New() //Production
 	r.Use(gin.Recovery())
 
-	db, err := dbEngine.NewDB(context.Background(), os.Getenv("DATABASE_URL"))
+	db, err := dbEngine.NewDB(context.Background(), os.Getenv("DATABASE_URL")) //Connects to the Dabase
 	if err != nil {
 		panic(err)
 	}
