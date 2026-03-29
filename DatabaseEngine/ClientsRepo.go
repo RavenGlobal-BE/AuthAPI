@@ -34,7 +34,10 @@ type ClientInfo struct {
 }
 
 func NewClientsRepo(db *DB) *ClientsRepo {
-	return &ClientsRepo{db: db}
+	return &ClientsRepo{
+		db:    db,
+		cache: make(map[string]cachedClient),
+	}
 }
 
 // Looks up a client app by client_id. Returns nil if not found or inactive.
