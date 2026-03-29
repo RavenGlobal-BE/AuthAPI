@@ -18,6 +18,10 @@ type TokenRepo struct {
 	redis *RedisClient
 }
 
+func (tr *TokenRepo) SMembers(context context.Context, key string) {
+	panic("unimplemented")
+}
+
 func NewTokenRepo(db *RedisClient) *TokenRepo {
 	return &TokenRepo{redis: db}
 }
@@ -89,10 +93,11 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 
 // InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
 func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID int64, data map[string]interface{}, ttl time.Duration) {
-	var key = "session:" + strconv.FormatInt(int64(userID), 10) + ":" + sessionID
-	tr.redis.client.HSet(ctx, key, data)
-	tr.redis.client.SAdd(ctx, key, ttl)
-	tr.redis.client.Expire(ctx, key, ttl)
+	sessionKey := "session:" + strconv.FormatInt(userID, 10) + ":" + sessionID
+	setKey := "user:sessions:" + strconv.FormatInt(userID, 10)
+	tr.redis.client.HSet(ctx, sessionKey, data)
+	tr.redis.client.SAdd(ctx, setKey, sessionID)
+	tr.redis.client.Expire(ctx, sessionKey, ttl)
 }
 
 // Deletes a refresh token from Redis (used during rotation).
@@ -232,18 +237,14 @@ func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) 
 	return data, nil
 }
 
-func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) (map[string]string, error) {
-	key := "session:" + strconv.Itoa(userID) + ":*"
-
-	data, err := tr.redis.client.HGetAll(ctx, key).Result()
+func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]string, error) {
+	setKey := "user:sessions:" + strconv.Itoa(userID)
+	devices, err := tr.redis.client.SMembers(ctx, setKey).Result()
 	if err != nil {
-		logger.Log(err.Error(), logger.Error)
 		return nil, err
 	}
-
-	if len(data) == 0 {
+	if len(devices) == 0 {
 		return nil, errors.New("no devices found")
 	}
-
-	return data, nil
+	return devices, nil
 }

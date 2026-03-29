@@ -725,13 +725,19 @@ func (a *App) setCountryCode(c *gin.Context) {
 }
 
 func (a *App) devices(c *gin.Context) {
-	_, exists := c.Get("user_id")
+	userID, exists := c.Get("user_id")
 
 	if exists != true {
 		c.JSON(400, gin.H{"error": "Invalid token"})
 		return
 	}
-	c.JSON(200, gin.H{"devices": "placeholder"})
+
+	devices, err := a.userRedis.GetDevices(context.Background(), userID.(int))
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+	c.JSON(200, gin.H{"devices": devices})
 }
 
 var tokenBlacklistedError = errors.New("Token blacklisted")
