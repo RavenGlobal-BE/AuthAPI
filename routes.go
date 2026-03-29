@@ -153,11 +153,8 @@ func (a *App) handleLogin(c *gin.Context) {
 		"location":     location,
 	}
 
-	//New redis session key
-	var sessionKey = "session:" + strconv.FormatInt(int64(user.UserID), 10) + ":" + sessionID
-
 	// Store session under raw sessionID — no hashing
-	a.userRedis.InsertSession(context.Background(), sessionKey, sessionData, 14*24*time.Hour)
+	a.userRedis.InsertSession(context.Background(), sessionID, user.UserID, sessionData, 14*24*time.Hour)
 
 	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
 	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
@@ -375,7 +372,7 @@ func (a *App) token(c *gin.Context) {
 		return
 	}
 
-	a.userRedis.InsertSession(context.Background(), tokenSessionID, map[string]interface{}{
+	a.userRedis.InsertSession(context.Background(), tokenSessionID, user.UserID, map[string]interface{}{
 		"user_id": user.UserID, "blacklisted": false,
 	}, 14*24*time.Hour)
 
@@ -434,7 +431,8 @@ func (a *App) refresh(c *gin.Context) {
 			if err == nil {
 				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country, claims.Audience[0])
 				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
-				a.userRedis.InsertSession(context.Background(), newSessionID, map[string]interface{}{
+
+				a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, map[string]interface{}{
 					"user_id": parsedID, "blacklisted": false, "client_id": tokenData["client_id"],
 				}, 14*24*time.Hour)
 				response["access_token"] = newAccessToken

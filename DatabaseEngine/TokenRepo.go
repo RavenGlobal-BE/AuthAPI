@@ -88,10 +88,11 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 }
 
 // InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
-func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, data map[string]interface{}, ttl time.Duration) {
-	tr.redis.client.HSet(ctx, sessionID, data)
-	tr.redis.client.SAdd(ctx, sessionID, ttl)
-	tr.redis.client.Expire(ctx, sessionID, ttl)
+func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID int64, data map[string]interface{}, ttl time.Duration) {
+	var key = "session:" + strconv.FormatInt(int64(userID), 10) + ":" + sessionID
+	tr.redis.client.HSet(ctx, key, data)
+	tr.redis.client.SAdd(ctx, key, ttl)
+	tr.redis.client.Expire(ctx, key, ttl)
 }
 
 // Deletes a refresh token from Redis (used during rotation).
