@@ -108,6 +108,13 @@ func (Ur *Usersrepo) VerifyAccount(email string) error {
 	return err
 }
 
+func (Ur *Usersrepo) SetCountryCode(userID int64, countryCode string) error {
+	_, err := Ur.db.pool.Exec(context.Background(), `
+		UPDATE accounts.users SET countrycode = $1 WHERE user_id = $2;
+	`, countryCode, userID)
+	return err
+}
+
 type UserAuth struct {
 	UserID         int64
 	Email          string

@@ -2,11 +2,22 @@ package databaseengine
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
 type ClientsRepo struct {
-	db *DB
+	db    *DB
+	cache map[string]cachedClient
+
+	/* This is an rw mutual exclusion lock where we can protect shared data.
+	Example: If one person is in the bathroom, others have to wait t'ill the person is done. */
+	mu sync.RWMutex
+}
+
+type cachedClient struct {
+	data      *ClientInfo
+	expiresAt time.Time
 }
 
 type ClientInfo struct {
@@ -28,6 +39,20 @@ func NewClientsRepo(db *DB) *ClientsRepo {
 
 // Looks up a client app by client_id. Returns nil if not found or inactive.
 func (cr *ClientsRepo) GetClientByID(ctx context.Context, clientID string) *ClientInfo {
+	cr.mu.RLock() //Read-Lock
+	cached, found := cr.cache[clientID]
+	cr.mu.RUnlock() //Read-Unlock
+
+	if found && time.Now().Before(cached.expiresAt) {
+		return cached.data
+	}
+
+	if found && time.Now().After(cached.expiresAt) {
+		cr.mu.Lock() //Write-Lock
+		delete(cr.cache, clientID)
+		cr.mu.Unlock() //Write-Unlock
+	}
+
 	var app ClientInfo
 
 	row := cr.db.pool.QueryRow(ctx, `
@@ -54,4 +79,16 @@ func (cr *ClientsRepo) GetClientByID(ctx context.Context, clientID string) *Clie
 	}
 
 	return &app
+}
+
+// Cleanup
+func (cr *ClientsRepo) Cleanup() {
+	cr.mu.Lock()
+	defer cr.mu.Unlock()
+
+	for clientID, cached := range cr.cache {
+		if time.Now().After(cached.expiresAt) {
+			delete(cr.cache, clientID)
+		}
+	}
 }

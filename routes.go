@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	auth "raven/auth/Authorization"
@@ -230,7 +231,7 @@ func (a *App) introspect(c *gin.Context) {
 
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid request body"})
+		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
 
@@ -253,7 +254,6 @@ func (a *App) introspect(c *gin.Context) {
 		"exp":        claims.ExpiresAt.Unix(),
 		"token_type": claims.TokenType,
 	})
-
 }
 
 func (a *App) token(c *gin.Context) {
@@ -704,4 +704,28 @@ func (a *App) setCountryCode(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"user": &user})
+}
+
+var tokenBlacklistedError = errors.New("Token blacklisted")
+var clientNotFoundError = errors.New("Client ID does not exist")
+
+func (a *App) introspectToken(AccessToken string) (bool, error) {
+	claims, err := auth.ValidateToken(AccessToken)
+	if err != nil {
+		return false, err
+	}
+
+	logger.Log(claims.SessionID, logger.Debug)
+
+	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
+	if sessionErr != nil || session["blacklisted"] == "1" {
+		return false, tokenBlacklistedError
+	}
+
+	client := a.cr.GetClientByID(context.Background(), claims.Audience[0])
+	if client == nil {
+		return false, clientNotFoundError
+	}
+
+	return true, nil
 }
