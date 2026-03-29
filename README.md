@@ -37,4 +37,7 @@ JWT_ISSUER="https://auth.raven.co.com"
 RedisHost=""
 RedisPort=""
 RedisPassword=""
+
+# Other settings
+FRONTEND_URL="https://auth.raven.co.com" #Used to redirect users to the website domain after registration or reset
 ```

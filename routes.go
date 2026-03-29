@@ -727,20 +727,13 @@ func (a *App) setCountryCode(c *gin.Context) {
 }
 
 func (a *App) devices(c *gin.Context) {
-	userID, exists := c.Get("user_id")
+	_, exists := c.Get("user_id")
 
 	if exists != true {
 		c.JSON(400, gin.H{"error": "Invalid token"})
 		return
 	}
-
-	user := a.ur.GetAccountById(userID.(int))
-
-	if user == nil {
-		c.JSON(404, gin.H{"error": "user not found"})
-		return
-	}
-	c.JSON(200, gin.H{"user": &user})
+	c.JSON(200, gin.H{"devices": "placeholder"})
 }
 
 var tokenBlacklistedError = errors.New("Token blacklisted")

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"strconv"
 	"time"
 
 	logger "raven/auth/Logging"
@@ -89,6 +90,7 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 // InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
 func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, data map[string]interface{}, ttl time.Duration) {
 	tr.redis.client.HSet(ctx, sessionID, data)
+	tr.redis.client.SAdd(ctx, sessionID, ttl)
 	tr.redis.client.Expire(ctx, sessionID, ttl)
 }
 
@@ -170,6 +172,7 @@ func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, er
 	return token, nil
 }
 
+// Inserts a reset token into Redis when the user resets their password
 func (tr *TokenRepo) ResetInsert(ctx context.Context, email string) (string, error) {
 	token := createToken()
 	key := "reset:" + token
@@ -190,6 +193,7 @@ func (tr *TokenRepo) ResetInsert(ctx context.Context, email string) (string, err
 	return token, nil
 }
 
+// Verifies whether the user clicked on is a legit one
 func (tr *TokenRepo) VerifyReset(ctx context.Context, verificationlink string) (map[string]string, error) {
 	key := "reset:" + verificationlink
 
@@ -223,6 +227,22 @@ func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) 
 	}
 
 	tr.redis.client.Del(ctx, key)
+
+	return data, nil
+}
+
+func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) (map[string]string, error) {
+	key := "session:" + strconv.Itoa(userID) + ":*"
+
+	data, err := tr.redis.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, errors.New("no devices found")
+	}
 
 	return data, nil
 }

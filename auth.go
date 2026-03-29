@@ -100,24 +100,24 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.GET("/verify", auth.RateLimiting(app.rateLimit), app.verify)
 	router.GET("/requestReset", auth.RateLimiting(app.rateLimit), app.requestReset)
 	router.POST("/reset", auth.RateLimiting(app.rateLimit), app.resetPassword)
-
-	//Token checker
-	router.POST("/introspect", app.introspect)
-	router.GET("/authorize", app.authorize)
+	router.POST("/devices", auth.JWTAuthMiddleware(), app.devices)
 
 	//Token management
+	router.POST("/introspect", app.introspect)
+	router.GET("/authorize", app.authorize)
 	router.POST("/token", auth.RateLimiting(app.rateLimit), app.token)
 	router.POST("/refresh", auth.RateLimiting(app.rateLimit), app.refresh)
-	router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout)
+	router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
 
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)
 	router.GET("/.well-known/openid-configuration", OpenIDConfig)
 
-	//Personalization
+	//Informational (Related to the website)
 	router.GET("/todayBG", app.todayBG)
 	router.GET("/clientInfo", app.clientInfo)
 
+	//Personalization
 	router.POST("/countryCode", auth.JWTAuthMiddleware(), app.setCountryCode)
 }
 
