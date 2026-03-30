@@ -92,6 +92,16 @@ func GenerateToken() (*string, error) {
 
 // Gets location information from IP
 func GetIPLocation(ip string) (map[string]interface{}, error) {
+	if ip == "::1" || ip == "127.0.0.1" {
+		return map[string]interface{}{
+			"country": "US",
+			"city":    "San Francisco",
+			"lat":     37.7749,
+			"lon":     -122.4194,
+			"carrier": "Raven Particle",
+		}, nil
+	}
+
 	url := "http://ip-api.com/json/" + ip
 
 	resp, err := http.Get(url)
@@ -112,6 +122,5 @@ func GetIPLocation(ip string) (map[string]interface{}, error) {
 		"lon":     data["lon"],
 		"carrier": data["isp"],
 	}
-
 	return formattedData, nil
 }

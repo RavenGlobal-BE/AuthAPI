@@ -100,6 +100,10 @@ func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID
 	tr.redis.client.Expire(ctx, sessionKey, ttl)
 }
 
+func (tr *TokenRepo) ExtendSession(ctx context.Context, sessionID string) {
+	tr.redis.client.Expire(ctx, sessionID, 14*24*time.Hour)
+}
+
 // Deletes a refresh token from Redis (used during rotation).
 func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
 	tr.redis.client.Del(ctx, refreshToken)
@@ -237,14 +241,24 @@ func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) 
 	return data, nil
 }
 
-func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]string, error) {
+func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]map[string]string, error) {
 	setKey := "user:sessions:" + strconv.Itoa(userID)
-	devices, err := tr.redis.client.SMembers(ctx, setKey).Result()
+	sessionIDs, err := tr.redis.client.SMembers(ctx, setKey).Result()
 	if err != nil {
 		return nil, err
 	}
-	if len(devices) == 0 {
-		return nil, errors.New("no devices found")
+
+	var devices []map[string]string
+	for _, sessionID := range sessionIDs {
+		sessionKey := "session:" + strconv.Itoa(userID) + ":" + sessionID
+
+		sessionData, err := tr.redis.client.HGetAll(ctx, sessionKey).Result()
+		if err != nil {
+			return nil, err
+		}
+
+		devices = append(devices, sessionData)
 	}
+
 	return devices, nil
 }

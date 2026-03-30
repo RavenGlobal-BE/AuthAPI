@@ -150,7 +150,10 @@ func (a *App) handleLogin(c *gin.Context) {
 		"device_model": loginData.DeviceModel,
 		"device_name":  loginData.DeviceName,
 		"language":     loginData.Language,
-		"location":     location,
+
+		"carrier": location["carrier"],
+		"lat":     location["lat"],
+		"lon":     location["lon"],
 	}
 
 	// Store session under raw sessionID — no hashing
@@ -439,6 +442,10 @@ func (a *App) refresh(c *gin.Context) {
 				response["refresh_token"] = newRefreshToken
 			}
 		}
+	} else {
+		// Extend the TTL of the current session for another 14 days
+		sessionKey := fmt.Sprintf("session:%d:%s", parsedID, claims.SessionID)
+		a.userRedis.ExtendSession(context.Background(), sessionKey)
 	}
 
 	c.JSON(200, response)
