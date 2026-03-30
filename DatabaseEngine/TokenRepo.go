@@ -18,10 +18,6 @@ type TokenRepo struct {
 	redis *RedisClient
 }
 
-func (tr *TokenRepo) SMembers(context context.Context, key string) {
-	panic("unimplemented")
-}
-
 func NewTokenRepo(db *RedisClient) *TokenRepo {
 	return &TokenRepo{redis: db}
 }
