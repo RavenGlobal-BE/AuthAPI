@@ -425,8 +425,8 @@ func (a *App) refresh(c *gin.Context) {
 
 	response := gin.H{"access_token": newAccessToken, "token_type": "Bearer", "expires_in": 900}
 
-	// Sliding window: rotate refresh token only when < 4 days remain (i.e. 10+ days old)
-	if time.Until(claims.ExpiresAt.Time) < 4*24*time.Hour {
+	// Sliding window: rotate refresh token only when < 2 days remain
+	if time.Until(claims.ExpiresAt.Time) < 2*24*time.Hour {
 		newSidPtr, newSidErr := auth.GenerateToken()
 		if newSidErr == nil {
 			newSessionID := *newSidPtr
@@ -443,7 +443,6 @@ func (a *App) refresh(c *gin.Context) {
 			}
 		}
 	} else {
-		// Extend the TTL of the current session for another 14 days
 		sessionKey := fmt.Sprintf("session:%d:%s", parsedID, claims.SessionID)
 		a.userRedis.ExtendSession(context.Background(), sessionKey)
 	}
