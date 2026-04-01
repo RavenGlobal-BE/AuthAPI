@@ -721,13 +721,13 @@ func (a *App) setCountryCode(c *gin.Context) {
 		return
 	}
 
-	user := a.ur.GetAccountById(userID.(int))
-
-	if user == nil {
-		c.JSON(404, gin.H{"error": "user not found"})
+	err := a.ur.SetCountryCode(userID.(int64), c.Query("country_code"))
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Failed to set country code"})
 		return
 	}
-	c.JSON(200, gin.H{"user": &user})
+
+	c.JSON(200, gin.H{"success": err != nil})
 }
 
 func (a *App) devices(c *gin.Context) {

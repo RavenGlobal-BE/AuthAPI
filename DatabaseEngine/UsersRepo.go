@@ -109,6 +109,9 @@ func (Ur *Usersrepo) VerifyAccount(email string) error {
 }
 
 func (Ur *Usersrepo) SetCountryCode(userID int64, countryCode string) error {
+	if countryCode == "" || len(countryCode) > 3 {
+		return errors.New("Invalid country code")
+	}
 	_, err := Ur.db.pool.Exec(context.Background(), `
 		UPDATE accounts.users SET countrycode = $1 WHERE user_id = $2;
 	`, countryCode, userID)
@@ -176,6 +179,7 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 	is_verified     SMALLINT NOT NULL DEFAULT 0,
 	flags           SMALLINT NOT NULL DEFAULT 0,
     timeDeletion    TIMESTAMP                    -- optional
+	profilePicture  VARCHAR(255),                -- optional key (NULL Allowed)
 	);`, schema, table)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
@@ -190,6 +194,11 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 
 	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
 		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS countrycode VARCHAR(5) NULL;`,
+		schema, table,
+	))
+
+	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS profilePicture VARCHAR(255) NULL;`,
 		schema, table,
 	))
 
