@@ -60,11 +60,13 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	// Checks whether the redirection URI is correct
 	if client.IsPublic == false && client.RedirectURI != loginData.RedirectURI {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid redirect URI"})
 		return
 	}
 
+	// Checks whether the email actually exists
 	user := a.ur.GetAccountByEmail(loginData.Email)
 	if user == nil || user.IsDeleted == 1 {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
@@ -109,15 +111,14 @@ func (a *App) handleLogin(c *gin.Context) {
 			logger.Log(err.Error(), logger.Error)
 			c.JSON(500, gin.H{"success": false, "reason": "Server error"})
 		}
-
 		return
+	}
 
-	} else {
-		result := auth.CheckPasswordHash(loginData.Password, user.Password)
-		if result == false {
-			c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
-			return
-		}
+	// Else...
+	result := auth.CheckPasswordHash(loginData.Password, user.Password)
+	if result == false {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
 	}
 
 	// Generate sessionID first — embedded in both tokens, used as the Redis key
@@ -159,8 +160,13 @@ func (a *App) handleLogin(c *gin.Context) {
 	// Store session under raw sessionID — no hashing
 	a.userRedis.InsertSession(context.Background(), sessionID, user.UserID, sessionData, 14*24*time.Hour)
 
-	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
-	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
+	/* Removed token setters in cookies as it's no longer required. How they're still here in case somebody else needs it. */
+	//c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
+	//c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
+
+	if len(setup) >= 1 {
+		c.SetCookie("setup_session", sessionID, 3600, "/", "", false, true)
+	}
 
 	c.JSON(200, gin.H{
 		"success":       true,
@@ -169,7 +175,6 @@ func (a *App) handleLogin(c *gin.Context) {
 		"token_type":    "Bearer",
 		"additional":    setup,
 	})
-
 }
 
 func (a *App) verify(c *gin.Context) {
@@ -195,26 +200,6 @@ func (a *App) verify(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"success": true})
-}
-
-func (a *App) handleRefresh(c *gin.Context) {
-	var requestData struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-
-	err := c.ShouldBindJSON(&requestData)
-	if err != nil {
-		c.JSON(400, gin.H{"success": false, "reason": "Invalid refresh token"})
-		return
-	}
-
-	payload, err := auth.ValidateToken(requestData.RefreshToken)
-	if err != nil {
-		c.JSON(401, gin.H{"success": false, "reason": "Invalid refresh token"})
-		return
-	}
-
-	fmt.Println(payload)
 }
 
 func (a *App) dbtest(c *gin.Context) { //Tests user authentication
@@ -387,11 +372,22 @@ func (a *App) token(c *gin.Context) {
 	})
 }
 
+type JWTData struct {
+	Email     string  `json:"email"`
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Country   *string `json:"country"`
+	Username  string  `json:"username"`
+}
+
 func (a *App) refresh(c *gin.Context) {
 	var req struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
+		UpdateInfo   bool   `json:"update_info"` //Re-fetches the user in question to update the token with the latest info.
 	}
+
+	userData := new(JWTData)
 
 	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
 		c.JSON(400, gin.H{"error": "invalid_request"})
@@ -403,6 +399,12 @@ func (a *App) refresh(c *gin.Context) {
 		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
+
+	userData.Email = claims.Email
+	userData.FirstName = claims.FirstName
+	userData.LastName = claims.LastName
+	*userData.Country = claims.Country
+	userData.Username = claims.Username
 
 	// Use sessionID directly from refresh token claims
 	tokenData, redisErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
@@ -417,7 +419,17 @@ func (a *App) refresh(c *gin.Context) {
 		return
 	}
 
-	newAccessToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, claims.Country, claims.Audience[0])
+	if req.UpdateInfo {
+		updatedInfo := a.ur.GetAccountById(int(parsedID))
+		if updatedInfo != nil {
+			userData.LastName = updatedInfo.LastName
+			userData.FirstName = updatedInfo.FirstName
+			userData.Email = updatedInfo.Email
+			userData.Country = updatedInfo.CountryCode
+		}
+	}
+
+	newAccessToken, err := auth.GenerateJWTToken(parsedID, userData.Email, userData.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, *userData.Country, claims.Audience[0])
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -430,9 +442,9 @@ func (a *App) refresh(c *gin.Context) {
 		newSidPtr, newSidErr := auth.GenerateToken()
 		if newSidErr == nil {
 			newSessionID := *newSidPtr
-			newRefreshToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, claims.Country, claims.Audience[0])
+			newRefreshToken, err := auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "refresh", time.Now().Add(14*24*time.Hour), claims.Nonce, newSessionID, *userData.Country, claims.Audience[0])
 			if err == nil {
-				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, claims.Country, claims.Audience[0])
+				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, *userData.Country, claims.Audience[0])
 				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 
 				a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, map[string]interface{}{
@@ -458,7 +470,7 @@ func (a *App) register(c *gin.Context) {
 		LastName    string `json:"last_name"`
 		Username    string `json:"username"`
 		CountryCode string `json:"country_code"`
-		Language    string `json:"language"` //This is a 2 letter code
+		Language    string `json:"language"` //This is a 2-letter code
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -612,7 +624,7 @@ func (a *App) authorize(c *gin.Context) {
 	accessCookie, _ := c.Cookie("access_token")
 	refreshCookie, _ := c.Cookie("refresh_token")
 
-	// If neither cookie exists, send to login immediately
+	// If neither cookie exists, send to "login" immediately
 	if accessCookie == "" && refreshCookie == "" {
 		c.Redirect(302, loginURL)
 		return
@@ -721,13 +733,13 @@ func (a *App) setCountryCode(c *gin.Context) {
 		return
 	}
 
-	err := a.ur.SetCountryCode(userID.(int64), c.Query("country_code"))
+	err := a.ur.SetCountryCode(userID.(int64), c.Query("set"))
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to set country code"})
 		return
 	}
 
-	c.JSON(200, gin.H{"success": err != nil})
+	c.JSON(200, gin.H{"success": false})
 }
 
 func (a *App) devices(c *gin.Context) {

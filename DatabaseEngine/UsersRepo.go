@@ -178,8 +178,8 @@ func (Ur *Usersrepo) SetupUsersTable() error {
     is_deleted      SMALLINT NOT NULL DEFAULT 0,
 	is_verified     SMALLINT NOT NULL DEFAULT 0,
 	flags           SMALLINT NOT NULL DEFAULT 0,
-    timeDeletion    TIMESTAMP                    -- optional
-	profilePicture  VARCHAR(255),                -- optional key (NULL Allowed)
+    timeDeletion    TIMESTAMP,                   -- optional
+	profilePicture  VARCHAR(255)                 -- optional key (NULL Allowed)
 	);`, schema, table)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
