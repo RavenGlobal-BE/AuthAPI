@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	auth "raven/auth/Authorization"
 	config "raven/auth/Config"
 	logger "raven/auth/Logging"
@@ -87,6 +88,7 @@ func (a *App) handleLogin(c *gin.Context) {
 
 		logger.Log("Key inserted: "+key, logger.Debug)
 
+		logger.Log(fmt.Sprintf("%s/%s/verify?code=%s\n", os.Getenv("FRONTEND_URL"), loginData.Language, key), logger.Debug)
 		a.mailService.AccountVerificationEmail(loginData.Email, user.FirstName, key, loginData.Language)
 		c.JSON(401, gin.H{"success": false, "reason": "verification_pending"})
 		return
@@ -179,7 +181,6 @@ func (a *App) handleLogin(c *gin.Context) {
 
 func (a *App) verify(c *gin.Context) {
 	verificationlink := c.Query("id")
-	fmt.Println(verificationlink)
 
 	if verificationlink == "" {
 		c.JSON(400, gin.H{"success": false, "reason": "No link passed"})
@@ -496,6 +497,7 @@ func (a *App) register(c *gin.Context) {
 
 	logger.Log("Key inserted: "+key, logger.Debug)
 
+	logger.Log(fmt.Sprintf("%s/%s/verify?code=%s\n", os.Getenv("FRONTEND_URL"), req.Language, key), logger.Debug)
 	a.mailService.AccountVerificationEmail(req.Email, req.FirstName, key, req.Language)
 	c.JSON(200, gin.H{"message": "Registered successfully."})
 }
