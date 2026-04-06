@@ -94,32 +94,22 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
-	//Backwards compatibility layer for users who are still on the old bcrypt system.
-	if strings.HasPrefix(user.Password, "$2b$") || strings.HasPrefix(user.Password, "$2a$") || strings.HasPrefix(user.Password, "$2y$") {
-		oldHash, err := auth.HashLegacyPassword(loginData.Password)
-		if err != nil {
-			logger.Log(err.Error(), logger.Error)
-			c.JSON(500, gin.H{"success": false, "reason": "Server error"})
-		}
-
-		result := auth.CheckLegacyHash(oldHash, user.Password)
-		if result == false {
-			c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
-		}
-
-		newHash, err := auth.HashPassword(loginData.Password)
-		err = a.ur.ResetPassword(user.Email, newHash)
-		if err != nil {
-			logger.Log(err.Error(), logger.Error)
-			c.JSON(500, gin.H{"success": false, "reason": "Server error"})
-		}
-		return
-	}
-
 	// Else...
 	result := auth.CheckPasswordHash(loginData.Password, user.Password)
 	if result == false {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
+	}
+
+	//Backwards compatibility layer for users who are still on the old bcrypt system.
+	if strings.HasPrefix(user.Password, "$2b$") || strings.HasPrefix(user.Password, "$2a$") || strings.HasPrefix(user.Password, "$2y$") {
+		newHash, err := auth.HashPassword(loginData.Password)
+		err = a.ur.ResetPassword(user.Email, newHash)
+
+		if err != nil {
+			logger.Log(err.Error(), logger.Error)
+			c.JSON(500, gin.H{"success": false, "reason": "Server error"})
+		}
 		return
 	}
 
@@ -162,9 +152,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	// Store session under raw sessionID — no hashing
 	a.userRedis.InsertSession(context.Background(), sessionID, user.UserID, sessionData, 14*24*time.Hour)
 
-	/* Removed token setters in cookies as it's no longer required. How they're still here in case somebody else needs it. */
-	//c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
-	//c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
+	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
+	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
 
 	if len(setup) >= 1 {
 		c.SetCookie("setup_session", sessionID, 3600, "/", "", false, true)
@@ -290,7 +279,6 @@ func (a *App) token(c *gin.Context) {
 		}
 		// Will be verified against stored code_challenge after consuming the auth code
 	} else {
-		// Confidential client: verify client_secret
 		if !auth.CheckPasswordHash(clientSecret, client.ClientSecret) {
 			c.JSON(401, gin.H{"error": "Invalid client"})
 			return

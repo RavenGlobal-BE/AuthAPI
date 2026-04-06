@@ -47,6 +47,11 @@ func SHA256Hash(input string) string {
 }
 
 func CheckPasswordHash(password string, encodedHash string) bool { //This is used to test the argon2id hash
+	if strings.HasPrefix(encodedHash, "$2b$") || strings.HasPrefix(encodedHash, "$2a$") || strings.HasPrefix(encodedHash, "$2y$") {
+		err := bcrypt.CompareHashAndPassword([]byte(encodedHash), []byte(password))
+		return err == nil
+	}
+
 	if len(encodedHash) < 10 || !strings.HasPrefix(encodedHash, "$argon2id$") {
 		return false
 	}
@@ -64,14 +69,6 @@ func CheckPasswordHash(password string, encodedHash string) bool { //This is use
 	}
 	testHash := argon2.IDKey([]byte(password), salt, argonTime, argonMemory, argonThreads, uint32(len(hash)))
 	return subtle.ConstantTimeCompare(hash, testHash) == 1
-}
-
-func CheckLegacyHash(password, encodedHash string) bool {
-	if strings.HasPrefix(encodedHash, "$2b$") || strings.HasPrefix(encodedHash, "$2a$") || strings.HasPrefix(encodedHash, "$2y$") {
-		err := bcrypt.CompareHashAndPassword([]byte(encodedHash), []byte(password))
-		return err == nil
-	}
-	return false
 }
 
 func GenerateToken() (*string, error) {
