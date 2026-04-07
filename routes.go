@@ -49,6 +49,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		return
 	}
 
+	// Checks whether the email is valid
 	mailValid := mailer.EmailIsValid(loginData.Email)
 	if mailValid == false {
 		c.JSON(400, gin.H{"success": false, "reason": "Invalid email"})
@@ -151,9 +152,11 @@ func (a *App) handleLogin(c *gin.Context) {
 
 	// Store session under raw sessionID — no hashing
 	a.userRedis.InsertSession(context.Background(), sessionID, user.UserID, sessionData, 14*24*time.Hour)
+	opToken, err := a.userRedis.InsertOPToken(context.Background(), user.UserID)
 
 	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
 	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
+	c.SetCookie("op_token", opToken, 8*60*60, "/", "", false, true)               // 8 hours
 
 	if len(setup) >= 1 {
 		c.SetCookie("setup_session", sessionID, 3600, "/", "", false, true)
@@ -602,7 +605,8 @@ func (a *App) authorize(c *gin.Context) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("http://localhost:3001/fr?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
+	loginURL := fmt.Sprintf("%s/fr?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
+		os.Getenv("FRONTEND_URL"),
 		url.QueryEscape(clientID),
 		url.QueryEscape(redirectURI),
 		url.QueryEscape(responseType),

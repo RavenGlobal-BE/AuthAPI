@@ -258,3 +258,39 @@ func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]map[string]s
 
 	return devices, nil
 }
+
+func (tr *TokenRepo) InsertOPToken(ctx context.Context, userID int64) (string, error) {
+	token := createToken()
+	key := "op_token:" + token
+
+	structureMap := map[string]interface{}{
+		"user_id": userID,
+	}
+
+	if err := tr.redis.client.HSet(ctx, key, structureMap).Err(); err != nil {
+		return "", err
+	}
+
+	if err := tr.redis.client.Expire(ctx, key, 8*time.Hour).Err(); err != nil {
+		_ = tr.redis.client.Del(ctx, key).Err() //Gets rid of the token in case of a failure to add it in.
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (tr *TokenRepo) GetOPTokenInfo(ctx context.Context, token string) (map[string]string, error) {
+	key := "op_token:" + token
+
+	data, err := tr.redis.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+		return nil, err
+	}
+
+	if len(data) == 0 {
+		return nil, errors.New("token is invalid or has expired")
+	}
+
+	return data, nil
+}
