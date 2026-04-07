@@ -53,7 +53,7 @@ jobs:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: 1.62.1
 
-      - name: Blue/Green Deploy to OVH
+      - name: Blue/Green Deploy to Oracle Cloud
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.OVH_HOST }}
