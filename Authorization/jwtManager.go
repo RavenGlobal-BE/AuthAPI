@@ -71,7 +71,7 @@ func GenerateJWTToken(userID int64, email, firstName, lastName, access string, e
 			ID:        *tokenID,
 			Issuer:    os.Getenv("JWT_ISSUER"),
 			Subject:   fmt.Sprintf("%d", userID), //Over wie deze token gaat (vervangt UserID)
-			Audience:  jwt.ClaimStrings{"Raven-Original"},
+			Audience:  jwt.ClaimStrings{audience},
 		},
 	}
 
@@ -110,7 +110,7 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 			return nil, errors.New("invalid token issuer")
 		}
 
-		if claims.Audience == nil || claims.Audience[0] != "Raven-Original" { // Check whether the token is really meant for "Raven Original" services.
+		if claims.Audience == nil { // Check whether the token is really meant for "Raven Original" services.
 			return nil, errors.New("invalid token audience")
 		}
 

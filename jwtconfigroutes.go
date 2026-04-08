@@ -45,7 +45,7 @@ func OpenIDConfig(c *gin.Context) {
 		"introspection_endpoint":                fmt.Sprintf("%s/introspect", os.Getenv("FRONTEND_URL")),
 		"subject_types_supported":               []string{"public"},
 		"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
-		"claims_supported":                      []string{"sub", "email", "given_name", "family_name", "iat", "exp"},
+		"claims_supported":                      []string{"email", "first_name", "last_name", "country", "username", "aud", "sid", "iat", "exp", "sub", "nonce", "token_type"},
 	})
 }
 

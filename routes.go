@@ -122,8 +122,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 	sessionID := *sidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, loginData.ClientID)
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, loginData.ClientID)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, client.AppName)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, client.AppName)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
@@ -257,10 +257,10 @@ func (a *App) introspect(c *gin.Context) {
 func (a *App) token(c *gin.Context) {
 	code := c.PostForm("code")
 	clientID := c.PostForm("client_id")
-	clientSecret := c.PostForm("client_secret")
+	clientSecret := c.PostForm("client_secret") //Only used for PKCE verification
 	redirectURI := c.PostForm("redirect_uri")
 
-	if code == "" || clientID == "" || clientSecret == "" || redirectURI == "" {
+	if code == "" || clientID == "" || redirectURI == "" {
 		c.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
@@ -276,8 +276,8 @@ func (a *App) token(c *gin.Context) {
 	if client.IsPublic {
 		// Public client: verify PKCE code_verifier
 		codeVerifier := c.PostForm("code_verifier")
-		if codeVerifier == "" {
-			c.JSON(401, gin.H{"error": "code_verifier required for public clients"})
+		if codeVerifier == "" || clientSecret == "" {
+			c.JSON(400, gin.H{"error": "code_verifier or client_secret are required for public clients"})
 			return
 		}
 		// Will be verified against stored code_challenge after consuming the auth code
@@ -341,12 +341,12 @@ func (a *App) token(c *gin.Context) {
 	}
 	tokenSessionID := *tokenSidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, clientID)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, client.AppName)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, clientID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, client.AppName)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
