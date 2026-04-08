@@ -8,10 +8,13 @@ var AllowVerbose bool = true
 
 // Version & Build
 var Version = "26.2"
-var Build float32 = 19
+var Build float32 = 20
 
 // Server configurations
 var Port int = 3000
+
+// Feature flags (Beta features, not fully tested, or not implemented yet)
+var EnableOpTokens bool = false //In this current implementation, OP tokens can and WILL disrupt & compromise the current auth flow
 var AllowQuantumSecure bool = false
 
 // Raven ONE configurations

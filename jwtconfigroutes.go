@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -33,15 +34,15 @@ func JWTKeys(c *gin.Context) {
 
 func OpenIDConfig(c *gin.Context) {
 	c.JSON(200, gin.H{
-		"issuer":                                "https://auth.raven.co.com",
-		"jwks_uri":                              "https://auth.raven.co.com/.well-known/jwks.json",
+		"issuer":                                os.Getenv("FRONTEND_URL"),
+		"jwks_uri":                              fmt.Sprintf("%s/.well-known/jwks.json", os.Getenv("FRONTEND_URL")),
 		"id_token_signing_alg_values_supported": []string{"EdDSA"},
 		"response_types_supported":              []string{"code"},
 		"scopes_supported":                      []string{"openid", "profile", "email"},
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
-		"authorization_endpoint":                "https://auth.raven.co.com/authorize",
-		"token_endpoint":                        "https://auth.raven.co.com/token",
-		"introspection_endpoint":                "https://auth.raven.co.com/introspect",
+		"authorization_endpoint":                fmt.Sprintf("%s/authorize", os.Getenv("FRONTEND_URL")),
+		"token_endpoint":                        fmt.Sprintf("%s/token", os.Getenv("FRONTEND_URL")),
+		"introspection_endpoint":                fmt.Sprintf("%s/introspect", os.Getenv("FRONTEND_URL")),
 		"subject_types_supported":               []string{"public"},
 		"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
 		"claims_supported":                      []string{"sub", "email", "given_name", "family_name", "iat", "exp"},

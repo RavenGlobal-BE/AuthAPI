@@ -1,5 +1,5 @@
 # Stage 1: The Builder (Heavy, has all the Go tools)
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.2-alpine3.23 AS builder
 WORKDIR /app
 
 # Cache dependencies first (makes future Blacksmith builds significantly faster)
