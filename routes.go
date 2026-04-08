@@ -580,6 +580,8 @@ func (a *App) requestReset(c *gin.Context) {
 // OIDC GET /authorize endpoint
 // Checks whether the user is authenticated (and still has a valid token).
 func (a *App) authorize(c *gin.Context) {
+	var userID string
+
 	clientID := c.Query("client_id")
 	redirectURI := c.Query("redirect_uri")
 	responseType := c.Query("response_type")
@@ -615,6 +617,43 @@ func (a *App) authorize(c *gin.Context) {
 		url.QueryEscape(nonce),
 	)
 
+	opSession, _ := c.Cookie("op_cookie")
+	if opSession != "" {
+		opData, err := a.userRedis.GetOPToken(context.Background(), opSession)
+
+		if err != nil {
+			logger.Log(err.Error(), logger.Error)
+		} else if opData["blacklisted"] != "1" && opData["user_id"] != "" {
+			userID = opData["user_id"]
+
+			code, codeErr := auth.GenerateToken()
+			if codeErr != nil {
+				logger.Log(err.Error(), logger.Error)
+				c.JSON(500, gin.H{"error": "Server error"})
+				return
+			}
+
+			authCodeData := map[string]interface{}{
+				"user_id":      userID,
+				"client_id":    clientID,
+				"redirect_uri": redirectURI,
+				"nonce":        nonce,
+				"scope":        scope,
+			}
+
+			if err := a.userRedis.InsertAuthCode(context.Background(), *code, authCodeData); err != nil {
+				c.JSON(500, gin.H{"error": "Server error"})
+				logger.Log(err.Error(), logger.Error)
+				return
+			}
+
+			// Redirect back to the third-party app with the auth code
+			redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
+			c.Redirect(302, redirect)
+			return
+		}
+	}
+
 	accessCookie, _ := c.Cookie("access_token")
 	refreshCookie, _ := c.Cookie("refresh_token")
 
@@ -623,8 +662,6 @@ func (a *App) authorize(c *gin.Context) {
 		c.Redirect(302, loginURL)
 		return
 	}
-
-	var userID string
 
 	// Validate the access token
 	cookieDetails, err := auth.ValidateToken(accessCookie)

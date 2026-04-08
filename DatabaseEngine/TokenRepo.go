@@ -264,7 +264,8 @@ func (tr *TokenRepo) InsertOPToken(ctx context.Context, userID int64) (string, e
 	key := "op_token:" + token
 
 	structureMap := map[string]interface{}{
-		"user_id": userID,
+		"user_id":     userID,
+		"blacklisted": "0",
 	}
 
 	if err := tr.redis.client.HSet(ctx, key, structureMap).Err(); err != nil {
@@ -279,7 +280,7 @@ func (tr *TokenRepo) InsertOPToken(ctx context.Context, userID int64) (string, e
 	return token, nil
 }
 
-func (tr *TokenRepo) GetOPTokenInfo(ctx context.Context, token string) (map[string]string, error) {
+func (tr *TokenRepo) GetOPToken(ctx context.Context, token string) (map[string]string, error) {
 	key := "op_token:" + token
 
 	data, err := tr.redis.client.HGetAll(ctx, key).Result()
@@ -289,7 +290,7 @@ func (tr *TokenRepo) GetOPTokenInfo(ctx context.Context, token string) (map[stri
 	}
 
 	if len(data) == 0 {
-		return nil, errors.New("token is invalid or has expired")
+		return nil, errors.New("Token is invalid or has expired")
 	}
 
 	return data, nil
