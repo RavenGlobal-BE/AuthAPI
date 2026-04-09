@@ -396,7 +396,7 @@ func (a *App) refresh(c *gin.Context) {
 	userData.FirstName = claims.FirstName
 	userData.LastName = claims.LastName
 	*userData.Country = claims.Country
-	userData.Username = claims.Username
+	userData.Username = claims.Username //Unused right now; will be used in future versions.
 
 	// Use sessionID directly from refresh token claims
 	tokenData, redisErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
@@ -628,7 +628,7 @@ func (a *App) authorize(c *gin.Context) {
 
 			code, codeErr := auth.GenerateToken()
 			if codeErr != nil {
-				logger.Log(err.Error(), logger.Error)
+				logger.Log(codeErr.Error(), logger.Error)
 				c.JSON(500, gin.H{"error": "Server error"})
 				return
 			}
