@@ -7,19 +7,30 @@ import (
 	"time"
 
 	dbEngine "raven/auth/DatabaseEngine"
+	logger "raven/auth/Logging"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
+/* As of v26.2 RC2, cookies are now a valid form of authorization. */
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid Authorization header"})
+		cookie, err := c.Cookie("access_token")
+
+		logger.Log(fmt.Sprintf("Auth Header: %s, Cookie: %s", authHeader, cookie), logger.Debug)
+		tokenString := ""
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		} else if err == nil && cookie != "" {
+			tokenString = cookie
+		}
+
+		if tokenString == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Missing or invalid credentials"})
 			return
 		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		payload, err := ValidateToken(tokenString)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -31,7 +42,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userID, err := strconv.Atoi(payload.RegisteredClaims.Subject)
+		userID, err := strconv.Atoi(payload.RegisteredClaims.Subject) // Convert userID from string to int
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
