@@ -764,7 +764,13 @@ func (a *App) setCountryCode(c *gin.Context) {
 		return
 	}
 
-	err := a.ur.SetCountryCode(userID.(int64), c.Query("set"))
+	userIDInt, ok := userID.(int)
+	if !ok {
+		c.JSON(400, gin.H{"error": "Invalid token"})
+		return
+	}
+
+	err := a.ur.SetCountryCode(int64(userIDInt), c.Query("set"))
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to set country code"})
 		return
