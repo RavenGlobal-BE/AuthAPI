@@ -776,7 +776,7 @@ func (a *App) setCountryCode(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, gin.H{"success": false})
+	c.JSON(200, gin.H{"success": true})
 }
 
 func (a *App) devices(c *gin.Context) {
