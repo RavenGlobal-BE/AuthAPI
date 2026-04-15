@@ -495,6 +495,12 @@ func (a *App) register(c *gin.Context) {
 
 func (a *App) logout(c *gin.Context) {
 	accessToken := c.GetHeader("Authorization")
+
+	if accessToken == "" {
+		c.JSON(400, gin.H{"error": "No token provided"})
+		return
+	}
+
 	if !strings.HasPrefix(accessToken, "Bearer ") {
 		c.JSON(401, gin.H{"error": "Unformatted token"})
 		return
@@ -607,7 +613,7 @@ func (a *App) authorize(c *gin.Context) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("%s/fr?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
+	loginURL := fmt.Sprintf("%s/en/login?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
 		os.Getenv("FRONTEND_URL"),
 		url.QueryEscape(clientID),
 		url.QueryEscape(redirectURI),
