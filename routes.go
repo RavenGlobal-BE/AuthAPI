@@ -675,6 +675,7 @@ func (a *App) authorize(c *gin.Context) {
 
 			// Redirect back to the third-party app with the auth code
 			redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
+			fmt.Println("Redirecting to: " + redirect)
 			c.Redirect(302, redirect)
 			return
 		}
@@ -773,7 +774,7 @@ func (a *App) authorize(c *gin.Context) {
 
 	// Redirect back to the third-party app with the auth code
 	redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
-	fmt.Printf("Redirecting to: %s\n", redirect)
+	fmt.Println("Redirecting to: " + redirect)
 	c.Redirect(302, redirect)
 }
 
