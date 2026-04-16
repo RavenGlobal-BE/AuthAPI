@@ -257,7 +257,7 @@ func (a *App) introspect(c *gin.Context) {
 func (a *App) token(c *gin.Context) {
 	code := c.PostForm("code")
 	clientID := c.PostForm("client_id")
-	clientSecret := c.PostForm("client_secret") //Only used for PKCE verification
+	clientSecret := c.PostForm("client_secret")
 	redirectURI := c.PostForm("redirect_uri")
 
 	if code == "" || clientID == "" || redirectURI == "" {
@@ -276,12 +276,16 @@ func (a *App) token(c *gin.Context) {
 	if client.IsPublic {
 		// Public client: verify PKCE code_verifier
 		codeVerifier := c.PostForm("code_verifier")
-		if codeVerifier == "" || clientSecret == "" {
-			c.JSON(400, gin.H{"error": "code_verifier or client_secret are required for public clients"})
+		if codeVerifier == "" {
+			c.JSON(400, gin.H{"error": "code_verifier is required for public clients"})
 			return
 		}
 		// Will be verified against stored code_challenge after consuming the auth code
 	} else {
+		if clientSecret == "" {
+			c.JSON(401, gin.H{"error": "Invalid client"})
+			return
+		}
 		if !auth.CheckPasswordHash(clientSecret, client.ClientSecret) {
 			c.JSON(401, gin.H{"error": "Invalid client"})
 			return
@@ -594,6 +598,8 @@ func (a *App) authorize(c *gin.Context) {
 	scope := c.Query("scope")
 	state := c.Query("state")
 	nonce := c.Query("nonce")
+	codeChallenge := c.Query("code_challenge")
+	codeChallengeMethod := c.Query("code_challenge_method")
 
 	if clientID == "" || redirectURI == "" || responseType != "code" || scope == "" || state == "" || nonce == "" {
 		c.JSON(400, gin.H{"error": "Invalid Request"})
@@ -613,15 +619,25 @@ func (a *App) authorize(c *gin.Context) {
 		return
 	}
 
-	loginURL := fmt.Sprintf("%s/en/login?client_id=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s&nonce=%s",
-		os.Getenv("FRONTEND_URL"),
-		url.QueryEscape(clientID),
-		url.QueryEscape(redirectURI),
-		url.QueryEscape(responseType),
-		url.QueryEscape(scope),
-		url.QueryEscape(state),
-		url.QueryEscape(nonce),
-	)
+	// Public clients (mobile/SPA) must provide PKCE params.
+	if client.IsPublic && (codeChallenge == "" || codeChallengeMethod != "S256") {
+		c.JSON(400, gin.H{"error": "PKCE required for this client"})
+		return
+	}
+
+	loginValues := url.Values{}
+	loginValues.Set("client_id", clientID)
+	loginValues.Set("redirect_uri", redirectURI)
+	loginValues.Set("response_type", responseType)
+	loginValues.Set("scope", scope)
+	loginValues.Set("state", state)
+	loginValues.Set("nonce", nonce)
+	if client.IsPublic {
+		loginValues.Set("code_challenge", codeChallenge)
+		loginValues.Set("code_challenge_method", codeChallengeMethod)
+	}
+
+	loginURL := fmt.Sprintf("%s/en/login?%s", os.Getenv("FRONTEND_URL"), loginValues.Encode())
 
 	opSession, _ := c.Cookie("op_cookie")
 	if opSession != "" {
@@ -645,6 +661,10 @@ func (a *App) authorize(c *gin.Context) {
 				"redirect_uri": redirectURI,
 				"nonce":        nonce,
 				"scope":        scope,
+			}
+
+			if client.IsPublic {
+				authCodeData["code_challenge"] = codeChallenge
 			}
 
 			if err := a.userRedis.InsertAuthCode(context.Background(), *code, authCodeData); err != nil {
@@ -741,14 +761,8 @@ func (a *App) authorize(c *gin.Context) {
 		"scope":        scope,
 	}
 
-	// For public clients (mobile/SPA), require and store the PKCE code_challenge
+	// For public clients (mobile/SPA), store the PKCE code_challenge.
 	if client.IsPublic {
-		codeChallenge := c.Query("code_challenge")
-		codeChallengeMethod := c.Query("code_challenge_method")
-		if codeChallenge == "" || codeChallengeMethod != "S256" {
-			c.JSON(400, gin.H{"error": "PKCE required for this client"})
-			return
-		}
 		authCodeData["code_challenge"] = codeChallenge
 	}
 
@@ -759,6 +773,7 @@ func (a *App) authorize(c *gin.Context) {
 
 	// Redirect back to the third-party app with the auth code
 	redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
+	fmt.Printf("Redirecting to: %s\n", redirect)
 	c.Redirect(302, redirect)
 }
 
