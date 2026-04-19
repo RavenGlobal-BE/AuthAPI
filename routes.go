@@ -122,8 +122,8 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 	sessionID := *sidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, client.AppName)
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, client.AppName)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, client.ClientID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, client.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
@@ -257,7 +257,7 @@ func (a *App) introspect(c *gin.Context) {
 func (a *App) token(c *gin.Context) {
 	code := c.PostForm("code")
 	clientID := c.PostForm("client_id")
-	clientSecret := c.PostForm("client_secret")
+	clientSecret := c.PostForm("client_secret") //Optional for public clients (Native apps)
 	redirectURI := c.PostForm("redirect_uri")
 
 	if code == "" || clientID == "" || redirectURI == "" {
@@ -345,12 +345,12 @@ func (a *App) token(c *gin.Context) {
 	}
 	tokenSessionID := *tokenSidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, client.AppName)
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, client.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, client.AppName)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, client.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
