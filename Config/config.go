@@ -4,11 +4,11 @@ package Config
 
 // Program configurations
 var TestMode bool = false
-var AllowVerbose bool = true
+var AllowVerbose bool = false
 
 // Version & Build
-var Version = "26.2"
-var Build float32 = 23
+var Version = "26.2.1"
+var Build float32 = 24
 
 // Server configurations
 var Port int = 3000
