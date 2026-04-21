@@ -521,6 +521,27 @@ func (a *App) logout(c *gin.Context) {
 	a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 	c.JSON(200, gin.H{"message": "Logged out successfully"})
 }
+func (a *App) userinfo(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if exists != true {
+		c.JSON(400, gin.H{"error": "Invalid request"})
+	}
+
+	user := a.ur.GetAccountById(userID.(int)) // Gets the up-to-date information
+	if user == nil {
+		c.JSON(404, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"userID":     user.UserID,
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"country":    user.CountryCode,
+		"username":   user.PublicUsername,
+	})
+}
 
 // Resets the user's password (ONLY BE RAN AFTER THE TOKEN IS GUARENTEED TO BE AVAILABLE)
 func (a *App) resetPassword(c *gin.Context) {
