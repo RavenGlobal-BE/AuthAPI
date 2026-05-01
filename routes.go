@@ -152,11 +152,11 @@ func (a *App) handleLogin(c *gin.Context) {
 
 	// Store session under raw sessionID — no hashing
 	a.userRedis.InsertSession(context.Background(), sessionID, user.UserID, sessionData, 14*24*time.Hour)
-	opToken, err := a.userRedis.InsertOPToken(context.Background(), user.UserID)
+	//opToken, err := a.userRedis.InsertOPToken(context.Background(), user.UserID)
 
 	c.SetCookie("access_token", accessToken, 900, "/", "", false, true)           // 15 min
 	c.SetCookie("refresh_token", refreshToken, 14*24*60*60, "/", "", false, true) // 14 days
-	c.SetCookie("op_cookie", opToken, 8*60*60, "/", "", false, true)              // 8 hours
+	//c.SetCookie("op_cookie", opToken, 8*60*60, "/", "", false, true)              // 8 hours
 
 	if len(setup) >= 1 {
 		c.SetCookie("setup_session", sessionID, 3600, "/", "", false, true)
@@ -525,6 +525,12 @@ func (a *App) userinfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if exists != true {
 		c.JSON(400, gin.H{"error": "Invalid request"})
+	}
+
+	_, err := a.userRedis.GetSessionByID(context.Background(), fmt.Sprintf("session:%d:%s", userID.(int), c.GetString("session_id")))
+	if err != nil {
+		c.JSON(404, gin.H{"error": "Session not found"})
+		return
 	}
 
 	user := a.ur.GetAccountById(userID.(int)) // Gets the up-to-date information

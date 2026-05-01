@@ -95,7 +95,7 @@ func GetIPLocation(ip string) (map[string]interface{}, error) {
 			"city":    "San Francisco",
 			"lat":     37.7749,
 			"lon":     -122.4194,
-			"carrier": "Raven Particle",
+			"carrier": "Localhost",
 		}, nil
 	}
 
