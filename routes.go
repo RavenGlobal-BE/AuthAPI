@@ -433,9 +433,14 @@ func (a *App) refresh(c *gin.Context) {
 				newAccessToken, _ = auth.GenerateJWTToken(parsedID, claims.Email, claims.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, newSessionID, *userData.Country, claims.Audience[0])
 				a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 
-				a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, map[string]interface{}{
-					"user_id": parsedID, "blacklisted": false, "client_id": tokenData["client_id"],
-				}, 14*24*time.Hour)
+				location, err := auth.GetIPLocation(c.ClientIP())
+				if err != nil {
+					logger.Log(err.Error(), logger.Error)
+				}
+
+				sessionData := a.userRedis.CreateSessionData(parsedID, tokenData["client_id"], "", "", "", false, location)
+
+				a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, sessionData, 14*24*time.Hour)
 				response["access_token"] = newAccessToken
 				response["refresh_token"] = newRefreshToken
 			}
@@ -511,6 +516,7 @@ func (a *App) logout(c *gin.Context) {
 	a.userRedis.DeleteToken(context.Background(), claims.SessionID)
 	c.JSON(200, gin.H{"message": "Logged out successfully"})
 }
+
 func (a *App) userinfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if exists != true {
