@@ -96,6 +96,25 @@ func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID
 	tr.redis.client.Expire(ctx, sessionKey, ttl)
 }
 
+func (tr *TokenRepo) CreateSessionData(userID int64, clientID, deviceModel, deviceName, language string, blacklisted bool, location map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		// Required Info
+		"user_id":     userID,
+		"blacklisted": blacklisted,
+		"client_id":   clientID,
+
+		// Device info: Optional
+		"device_model": deviceModel,
+		"device_name":  deviceName,
+		"language":     language,
+
+		// Location info: Optional
+		"carrier": location["carrier"],
+		"lat":     location["lat"],
+		"lon":     location["lon"],
+	}
+}
+
 func (tr *TokenRepo) ExtendSession(ctx context.Context, sessionID string) {
 	tr.redis.client.Expire(ctx, sessionID, 14*24*time.Hour)
 }

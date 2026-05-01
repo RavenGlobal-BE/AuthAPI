@@ -134,21 +134,7 @@ func (a *App) handleLogin(c *gin.Context) {
 		logger.Log(err.Error(), logger.Error)
 	}
 
-	sessionData := map[string]interface{}{
-		//Required info
-		"user_id":     user.UserID,
-		"blacklisted": false,
-		"client_id":   loginData.ClientID,
-
-		//Device information
-		"device_model": loginData.DeviceModel,
-		"device_name":  loginData.DeviceName,
-		"language":     loginData.Language,
-
-		"carrier": location["carrier"],
-		"lat":     location["lat"],
-		"lon":     location["lon"],
-	}
+	sessionData := a.userRedis.CreateSessionData(user.UserID, loginData.ClientID, loginData.DeviceModel, loginData.DeviceName, loginData.Language, false, location)
 
 	// Store session under raw sessionID — no hashing
 	a.userRedis.InsertSession(context.Background(), sessionID, user.UserID, sessionData, 14*24*time.Hour)
@@ -356,9 +342,13 @@ func (a *App) token(c *gin.Context) {
 		return
 	}
 
-	a.userRedis.InsertSession(context.Background(), tokenSessionID, user.UserID, map[string]interface{}{
-		"user_id": user.UserID, "blacklisted": false,
-	}, 14*24*time.Hour)
+	location, err := auth.GetIPLocation(c.ClientIP())
+	if err != nil {
+		logger.Log(err.Error(), logger.Error)
+	}
+
+	sessionData := a.userRedis.CreateSessionData(user.UserID, authData["client_id"], "", "", "", false, location)
+	a.userRedis.InsertSession(context.Background(), tokenSessionID, user.UserID, sessionData, 14*24*time.Hour)
 
 	c.JSON(200, gin.H{
 		"access_token":  accessToken,
