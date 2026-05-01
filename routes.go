@@ -519,17 +519,26 @@ func (a *App) logout(c *gin.Context) {
 
 func (a *App) userinfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
+	sessionID, exists := c.Get("session_id")
+
 	if exists != true {
-		c.JSON(400, gin.H{"error": "Invalid request"})
+		c.JSON(400, gin.H{"error": "Invalid token"})
+		return
 	}
 
-	_, err := a.userRedis.GetSessionByID(context.Background(), fmt.Sprintf("session:%d:%s", userID.(int), c.GetString("session_id")))
+	sessionData, err := a.userRedis.GetSessionByID(context.Background(), fmt.Sprintf("session:%d:%s", userID.(int), sessionID.(string)))
 	if err != nil {
 		c.JSON(404, gin.H{"error": "Session not found"})
 		return
 	}
 
-	user := a.ur.GetAccountById(userID.(int)) // Gets the up-to-date information
+	userIDInt, err := strconv.Atoi(sessionData["user_id"])
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Invalid session data"})
+		return
+	}
+
+	user := a.ur.GetAccountById(userIDInt) // Gets the up-to-date information
 	if user == nil {
 		c.JSON(404, gin.H{"error": "User not found"})
 		return
