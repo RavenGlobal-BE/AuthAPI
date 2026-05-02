@@ -7,8 +7,8 @@ var TestMode bool = false
 var AllowVerbose bool = false
 
 // Version & Build
-var Version = "26.2.2"
-var Build float32 = 25
+var Version = "26.2.2a"
+var Build float32 = 26
 
 // Server configurations
 var Port int = 3000
