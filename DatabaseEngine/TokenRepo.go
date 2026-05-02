@@ -80,6 +80,7 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 	if sessionID == "" {
 		return nil, errors.New("empty session ID")
 	}
+
 	result, err := tr.redis.client.HGetAll(ctx, sessionID).Result()
 	if err != nil || len(result) == 0 {
 		return nil, errors.New("session not found")

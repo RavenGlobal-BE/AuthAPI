@@ -526,7 +526,9 @@ func (a *App) userinfo(c *gin.Context) {
 		return
 	}
 
-	sessionData, err := a.userRedis.GetSessionByID(context.Background(), fmt.Sprintf("session:%d:%s", userID.(int), sessionID.(string)))
+	redisKey := fmt.Sprintf("session:%d:%s", userID.(int), sessionID.(string))
+
+	sessionData, err := a.userRedis.GetSessionByID(context.Background(), redisKey)
 	if err != nil {
 		c.JSON(404, gin.H{"error": "Session not found"})
 		return

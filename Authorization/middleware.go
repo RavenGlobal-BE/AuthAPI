@@ -21,7 +21,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		logger.Log(fmt.Sprintf("Auth Header: %s, Cookie: %s", authHeader, cookie), logger.Debug)
 		tokenString := ""
-		if strings.HasPrefix(authHeader, "Bearer ") {
+		if strings.Contains(authHeader, "Bearer ") {
 			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
 		} else if err == nil && cookie != "" {
 			tokenString = cookie
