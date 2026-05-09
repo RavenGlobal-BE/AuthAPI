@@ -389,7 +389,7 @@ func (a *App) refresh(c *gin.Context) {
 	userData.Email = claims.Email
 	userData.FirstName = claims.FirstName
 	userData.LastName = claims.LastName
-	*userData.Country = claims.Country
+	userData.Country = &claims.Country
 	userData.Username = claims.Username //Unused right now; will be used in future versions.
 
 	// Use sessionID directly from refresh token claims
@@ -413,6 +413,11 @@ func (a *App) refresh(c *gin.Context) {
 			userData.Email = updatedInfo.Email
 			userData.Country = updatedInfo.CountryCode
 		}
+	}
+
+	if userData.Country == nil { //Sometimes can be nil in rare circumstances.
+		emptyCountry := "N/A"
+		userData.Country = &emptyCountry
 	}
 
 	newAccessToken, err := auth.GenerateJWTToken(parsedID, userData.Email, userData.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, *userData.Country, claims.Audience[0])

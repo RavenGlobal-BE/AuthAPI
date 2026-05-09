@@ -117,7 +117,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	// router.POST("/token", auth.RateLimiting(app.rateLimit), app.token)
 	// router.POST("/refresh", auth.RateLimiting(app.rateLimit), app.refresh)
 	// router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
-	router.POST("/userinfo", auth.JWTAuthMiddleware(), app.userinfo) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
+	router.POST("/userinfo", auth.JWTAuthMiddleware(), app.userinfo)
 	router.POST("/token", app.token)
 	router.POST("/refresh", app.refresh)
 	router.POST("/logout", app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
