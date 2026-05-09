@@ -42,6 +42,9 @@ func main() {
 	r := gin.New() //Production
 	r.Use(gin.Recovery())
 
+	// bruh, _ := auth.HashPassword("")
+	// fmt.Println(bruh)
+
 	db, err := dbEngine.NewDB(context.Background(), os.Getenv("DATABASE_URL")) //Connects to the Dabase
 	if err != nil {
 		panic(err)
@@ -67,6 +70,12 @@ func main() {
 
 	redisDataStore := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 0)
 	userRedis := dbEngine.NewTokenRepo(redisDataStore)
+	err = userRedis.Ping(context.Background())
+	if err != nil {
+		logging.Log("Error connecting to Redis: "+err.Error(), logging.Fatal)
+	} else {
+		logging.Log("Successfully connected to Redis", logging.Info)
+	}
 
 	rateLimitRedis := dbEngine.CreateRedisClient(os.Getenv("RedisHost")+":"+os.Getenv("RedisPort"), os.Getenv("RedisPassword"), 1)
 	rateRepo := dbEngine.NewRateRepo(rateLimitRedis)
@@ -105,10 +114,13 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	//Token management
 	router.POST("/introspect", app.introspect)
 	router.GET("/authorize", app.authorize)
-	router.POST("/token", auth.RateLimiting(app.rateLimit), app.token)
-	router.POST("/refresh", auth.RateLimiting(app.rateLimit), app.refresh)
-	router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
-	router.POST("/userinfo", auth.JWTAuthMiddleware(), app.userinfo)     //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
+	// router.POST("/token", auth.RateLimiting(app.rateLimit), app.token)
+	// router.POST("/refresh", auth.RateLimiting(app.rateLimit), app.refresh)
+	// router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
+	router.POST("/userinfo", auth.JWTAuthMiddleware(), app.userinfo) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
+	router.POST("/token", app.token)
+	router.POST("/refresh", app.refresh)
+	router.POST("/logout", app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
 
 	//Well known routes
 	router.GET("/.well-known/jwks.json", JWTKeys)

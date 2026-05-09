@@ -22,6 +22,11 @@ func NewTokenRepo(db *RedisClient) *TokenRepo {
 	return &TokenRepo{redis: db}
 }
 
+// Ping checks Redis connectivity for this repo.
+func (tr *TokenRepo) Ping(ctx context.Context) error {
+	return tr.redis.client.Ping(ctx).Err()
+}
+
 func (tr *TokenRepo) InsertToken(ctx context.Context, key string, structure map[string]interface{}, expiry time.Duration) bool {
 	hash := sha256.New()
 	hash.Write([]byte(key))

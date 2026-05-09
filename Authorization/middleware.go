@@ -55,6 +55,8 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
+var whitelistedIPs = []string{"::1", "127.0.0.1"}
+
 func RateLimiting(rr *dbEngine.RateRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
