@@ -227,7 +227,8 @@ func (a *App) introspect(c *gin.Context) {
 
 	logger.Log(claims.SessionID, logger.Debug)
 
-	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
+	sessionKey := fmt.Sprintf("session:%s:%s", claims.Subject, claims.SessionID)
+	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), sessionKey)
 	if sessionErr != nil || session["blacklisted"] == "1" {
 		c.JSON(200, gin.H{"active": false})
 		return
@@ -392,16 +393,17 @@ func (a *App) refresh(c *gin.Context) {
 	userData.Country = &claims.Country
 	userData.Username = claims.Username //Unused right now; will be used in future versions.
 
-	// Use sessionID directly from refresh token claims
-	tokenData, redisErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
-	if redisErr != nil || tokenData["blacklisted"] == "1" {
-		c.JSON(401, gin.H{"error": "Invalid token"})
-		return
-	}
-
 	parsedID, err := strconv.ParseInt(claims.Subject, 10, 64)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
+	// Use the same session key format used when inserting
+	sessionKey := fmt.Sprintf("session:%d:%s", parsedID, claims.SessionID)
+	tokenData, redisErr := a.userRedis.GetSessionByID(context.Background(), sessionKey)
+	if redisErr != nil || tokenData["blacklisted"] == "1" {
+		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
 
@@ -867,7 +869,8 @@ func (a *App) introspectToken(AccessToken string) (bool, error) {
 
 	logger.Log(claims.SessionID, logger.Debug)
 
-	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), claims.SessionID)
+	sessionKey := fmt.Sprintf("session:%s:%s", claims.Subject, claims.SessionID)
+	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), sessionKey)
 	if sessionErr != nil || session["blacklisted"] == "1" {
 		return false, tokenBlacklistedError
 	}
