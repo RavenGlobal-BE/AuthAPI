@@ -82,6 +82,9 @@ func GenerateJWTToken(userID int64, email, firstName, lastName, access string, e
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, payload)
+	// Set the Key ID (kid)
+	token.Header["kid"] = os.Getenv("JWT_KID")
+
 	tokenString, err := token.SignedString(privateKey)
 	if err != nil {
 		logger.Log(err.Error(), logger.Error)
