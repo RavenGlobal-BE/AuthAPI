@@ -117,8 +117,10 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 			return nil, errors.New("invalid token audience")
 		}
 
-		if claims.ExpiresAt.Before(time.Now()) { //Checks whether the token is expired
-			return nil, errors.New("token has expired")
+		if (os.Getenv("ENVIRONMENT") != "DEVELOPMENT") || (os.Getenv("ENVIRONMENT") != "TEST") {
+			if claims.ExpiresAt.Before(time.Now()) { //Checks whether the token is expired
+				return nil, errors.New("token has expired")
+			}
 		}
 
 		if claims.TokenType != "access" && claims.TokenType != "refresh" { //Checks whether it's a valid type of token

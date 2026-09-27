@@ -14,6 +14,7 @@ import (
 )
 
 /* As of v26.2 RC2, cookies are now a valid form of authorization. */
+/* As of v26.3 (Beta 1), token signature verification and expiry checks get skipped depending on the "ENVIRONMENT" in .env. */
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
