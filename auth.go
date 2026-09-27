@@ -8,6 +8,7 @@ import (
 	dbEngine "raven/auth/DatabaseEngine"
 	logging "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
+	"strconv"
 	"strings"
 	"time"
 
@@ -92,8 +93,10 @@ func main() {
 
 	RegisterRoutes(r, app)
 
-	logging.Log(fmt.Sprintf("Starting Raven ONE Auth on port %d...", config.Port), logging.Info)
-	if err := r.Run(fmt.Sprintf(":%d", config.Port)); err != nil {
+	port, err := strconv.Atoi(os.Getenv("PORT"))
+
+	logging.Log(fmt.Sprintf("Starting Raven ONE Auth on port %d...", port), logging.Info)
+	if err := r.Run(fmt.Sprintf(":%d", port)); err != nil {
 		logging.Log(err.Error(), logging.Fatal)
 	}
 }
@@ -138,7 +141,7 @@ func displayConfigs() {
 	logging.Log(fmt.Sprintf("Current Branch: %s", os.Getenv("ENVIRONMENT")), logging.Debug)
 
 	logging.Log(fmt.Sprintf("Build: %f", config.Build), logging.Debug)
-	logging.Log(fmt.Sprintf("Port: %d", config.Port), logging.Debug)
+	logging.Log(fmt.Sprintf("Port: %s", os.Getenv("PORT")), logging.Debug)
 	logging.Log(fmt.Sprintf("CDN Endpoint: %s", config.CdnEndpoint), logging.Debug)
 
 	logging.Log(fmt.Sprintf("Database URL: %s", os.Getenv("DATABASE_URL")), logging.Debug)
@@ -148,4 +151,21 @@ func displayConfigs() {
 	logging.Log(fmt.Sprintf("Mail User: %s", os.Getenv("MailUser")), logging.Debug)
 	logging.Log(fmt.Sprintf("Mail Password: %s", os.Getenv("MailPassword")), logging.Debug)
 	logging.Log(fmt.Sprintf("Mail Server: %s", os.Getenv("MailServer")), logging.Debug)
+
+	if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+		token, _ := auth.GenerateJWTToken(
+			2035872413979250688,                // userID (sub)
+			"imad@raven.co.com",                // email
+			"Imad",                             // firstName
+			"Amroug",                           // lastName
+			"access",                           // access (token_type)
+			time.Unix(1798747095, 0),           // expiration (exp)
+			"b93TD9T5CHPlTtySHEvCp172coeskrtO", // nonce
+			"0965c3377da8cb95b27ba02b04292dbf4640f3d988da7644e79e285f6d1bd11a", // sessionID (sid)
+			"BE",           // country
+			"particle-ios", // audience (aud[0])
+		)
+
+		logging.Log(token, logging.Debug)
+	}
 }

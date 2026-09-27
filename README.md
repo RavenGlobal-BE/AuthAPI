@@ -7,9 +7,9 @@ This is the brand new system Raven will be using for authentication & authorizat
 ## What does it allow you to do?
 Raven Auth allows you to:
 - Log in
-- Register your account (along with a verification system)
-- View user settings & modify them (coming soon)
-- Reset your password if they need to (coming soon)
+- Register your account (along with an e-mail verification system)
+- View user settings & modify them
+- Resetting password support
 - Enterprise SSO (coming soon)
 - Tokenization
 
@@ -42,4 +42,5 @@ RedisPassword=""
 FRONTEND_URL="https://auth.raven.co.com" #Used to redirect users to the website domain after registration or reset
 
 ENVIRONMENT="DEVELOPMENT" #Can either be "DEVELOPMENT", "RELEASE" or "TESTING"
+PORT=3000
 ```

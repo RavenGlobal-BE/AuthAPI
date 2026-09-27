@@ -11,7 +11,7 @@ var Version = "26.3"
 var Build float32 = 31
 
 // Server configurations
-var Port int = 3001
+// Port has been migrated to .env
 
 // Feature flags (Beta features, not fully tested, or not implemented yet)
 var EnableOpTokens bool = false //In this current implementation, OP tokens can and WILL disrupt & compromise the current auth flow
