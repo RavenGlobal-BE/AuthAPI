@@ -105,12 +105,28 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 	}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok { // Verifying the signing method is correct
-			return nil, errors.New("unexpected signing method")
+		if token.Method.Alg() != jwt.SigningMethodEdDSA.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
 		}
 
-		if claims.Issuer != os.Getenv("JWT_ISSUER") { // Verifying whether the issuer truely comes from Raven.
-			return nil, errors.New("invalid token issuer")
+		token, err := jwt.ParseWithClaims(tokenString, claims,
+			func(token *jwt.Token) (interface{}, error) {
+				kid, ok := token.Header["kid"].(string)
+				if !ok || kid == "" {
+					return nil, errors.New("missing kid header")
+				}
+				if kid != os.Getenv("JWT_KID") {
+					return nil, fmt.Errorf("unknown kid: %s", kid)
+				}
+				return publicKey, nil
+			},
+			jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
+			jwt.WithIssuer(os.Getenv("JWT_ISSUER")),
+			jwt.WithExpirationRequired(), // also enforces exp/nbf/iat
+		)
+		if err != nil {
+			logger.Log(err.Error(), logger.Debug)
+			return nil, err
 		}
 
 		if claims.Audience == nil { // Check whether the token is really meant for "Raven Original" services.
