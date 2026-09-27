@@ -3,7 +3,6 @@ package Logging
 import (
 	"fmt"
 	"os"
-	config "raven/auth/Config"
 	"time"
 )
 
@@ -36,7 +35,7 @@ var LogLetterType = map[LogType][2]string{
 func Log(message string, logType LogType) {
 	current_time := time.Now()
 
-	if config.AllowVerbose == false && logType == Debug {
+	if os.Getenv("ENVIRONMENT") != "DEVELOPMENT" && logType == Debug {
 		return
 	}
 

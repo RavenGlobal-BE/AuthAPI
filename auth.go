@@ -135,6 +135,8 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 }
 
 func displayConfigs() {
+	logging.Log(fmt.Sprintf("Current Branch: %s", os.Getenv("ENVIRONMENT")), logging.Debug)
+
 	logging.Log(fmt.Sprintf("Build: %f", config.Build), logging.Debug)
 	logging.Log(fmt.Sprintf("Port: %d", config.Port), logging.Debug)
 	logging.Log(fmt.Sprintf("CDN Endpoint: %s", config.CdnEndpoint), logging.Debug)

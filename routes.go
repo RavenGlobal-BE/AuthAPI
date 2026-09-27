@@ -422,7 +422,7 @@ func (a *App) refresh(c *gin.Context) {
 		userData.Country = &emptyCountry
 	}
 
-	newAccessToken, err := auth.GenerateJWTToken(parsedID, userData.Email, userData.FirstName, claims.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, *userData.Country, claims.Audience[0])
+	newAccessToken, err := auth.GenerateJWTToken(parsedID, userData.Email, userData.FirstName, userData.LastName, "access", time.Now().Add(15*time.Minute), claims.Nonce, claims.SessionID, *userData.Country, claims.Audience[0])
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return

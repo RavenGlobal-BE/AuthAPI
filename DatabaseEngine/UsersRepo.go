@@ -239,7 +239,7 @@ func (Ur *Usersrepo) SetupCompanyIntegration() error {
 		schema, table,
 	))
 
-	logger.Log("3rdParty Apps table ready", logger.Info)
+	logger.Log("Accounts database table ready", logger.Info)
 
 	return nil
 }
