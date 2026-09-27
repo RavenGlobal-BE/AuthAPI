@@ -22,7 +22,7 @@ This implementation also is backwards compatible with older Raven Auth versions 
 - A single GPU should suffice
 
 ## .env configuration
-```
+```env
 MailServer=""
 MailUser=""
 MailPassword=""
@@ -40,4 +40,6 @@ RedisPassword=""
 
 # Other settings
 FRONTEND_URL="https://auth.raven.co.com" #Used to redirect users to the website domain after registration or reset
+
+ENVIRONMENT="DEVELOPMENT" #Can either be "DEVELOPMENT", "RELEASE" or "TESTING"
 ```
