@@ -104,13 +104,13 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 		return nil, err
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		if token.Method.Alg() != jwt.SigningMethodEdDSA.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
 		}
 
 		token, err := jwt.ParseWithClaims(tokenString, claims,
-			func(token *jwt.Token) (interface{}, error) {
+			func(token *jwt.Token) (any, error) {
 				kid, ok := token.Header["kid"].(string)
 				if !ok || kid == "" {
 					return nil, errors.New("missing kid header")

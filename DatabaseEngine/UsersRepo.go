@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	logger "raven/auth/Logging"
+	input "raven/auth/SecureInput"
 	"time"
 
 	"github.com/bwmarrin/snowflake"
@@ -109,9 +110,10 @@ func (Ur *Usersrepo) VerifyAccount(email string) error {
 }
 
 func (Ur *Usersrepo) SetCountryCode(userID int64, countryCode string) error {
-	if countryCode == "" || len(countryCode) > 3 {
-		return errors.New("Invalid country code")
+	if !input.CountryExists(countryCode) {
+		return errors.New("invalid country code")
 	}
+
 	_, err := Ur.db.pool.Exec(context.Background(), `
 		UPDATE accounts.users SET countrycode = $1 WHERE user_id = $2;
 	`, countryCode, userID)
@@ -163,24 +165,22 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 	// This function checks wheter the table contains all the elements used in this API.
 	// If it doesn't, it creates the missing elements.
 
-	schema := "accounts"
-	table := "users"
-
 	query := fmt.Sprintf(`
-	CREATE TABLE IF NOT EXISTS %s.%s (
-    user_id         BIGINT PRIMARY KEY,          -- Twitter Snowflake implementation (soon)
+	CREATE TABLE IF NOT EXISTS accounts.users (
+    user_id         BIGINT PRIMARY KEY,          -- Twitter Snowflake
     email           VARCHAR(255) UNIQUE NOT NULL,
     password        VARCHAR(255) NOT NULL,
-    first_name      VARCHAR(255) NOT NULL,
-    last_name       VARCHAR(255),                -- optional (NULL allowed)
-    publicUsername  VARCHAR(255),                -- optional (NULL allowed) -> Means private account
+    first_name      VARCHAR(32) NOT NULL,
+	middle_name	 	VARCHAR(32),
+    last_name       VARCHAR(32),                -- optional (NULL allowed)
+    publicUsername  VARCHAR(255),               -- optional (NULL allowed) -> Means private account
     countryCode     VARCHAR(5) NOT NULL,
     is_deleted      SMALLINT NOT NULL DEFAULT 0,
 	is_verified     SMALLINT NOT NULL DEFAULT 0,
 	flags           SMALLINT NOT NULL DEFAULT 0,
     timeDeletion    TIMESTAMP,                   -- optional
 	profilePicture  VARCHAR(255)                 -- optional key (NULL Allowed)
-	);`, schema, table)
+	);`)
 
 	_, err := Ur.db.pool.Exec(context.Background(), query)
 	if err != nil {
@@ -188,20 +188,29 @@ func (Ur *Usersrepo) SetupUsersTable() error {
 	}
 
 	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
-		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS is_verified SMALLINT NOT NULL DEFAULT 0;`,
-		schema, table,
+		`ALTER TABLE accounts.users ADD COLUMN IF NOT EXISTS is_verified SMALLINT NOT NULL DEFAULT 0;`,
 	))
 
 	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
-		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS countrycode VARCHAR(5) NULL;`,
-		schema, table,
+		`ALTER TABLE accounts.users ADD COLUMN IF NOT EXISTS countrycode VARCHAR(5) NULL;`,
 	))
 
 	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
-		`ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS profilePicture VARCHAR(255) NULL;`,
-		schema, table,
+		`ALTER TABLE accounts.users ADD COLUMN IF NOT EXISTS profilePicture VARCHAR(255) NULL;`,
 	))
 
+	_, _ = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE accounts.users ADD COLUMN IF NOT EXISTS middle_name VARCHAR(32) NULL;`,
+	))
+
+	// 27.0 (Beta 1)
+	_, err = Ur.db.pool.Exec(context.Background(), fmt.Sprintf(
+		`ALTER TABLE accounts.users
+	   				ALTER COLUMN first_name TYPE VARCHAR(32),
+	   				ALTER COLUMN first_name SET NOT NULL;
+				ALTER TABLE accounts.users
+	   				ALTER COLUMN last_name TYPE VARCHAR(32)`,
+	))
 	return nil
 }
 
