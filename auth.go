@@ -135,6 +135,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 
 	//Personalization
 	router.POST("/countryCode", auth.JWTAuthMiddleware(), app.setCountryCode)
+	router.PUT("/update", auth.JWTAuthMiddleware(), app.updateProfile)
 }
 
 func displayConfigs() {

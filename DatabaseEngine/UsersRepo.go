@@ -6,6 +6,7 @@ import (
 	"fmt"
 	logger "raven/auth/Logging"
 	input "raven/auth/SecureInput"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/snowflake"
@@ -261,6 +262,22 @@ func (Ur *Usersrepo) SetupSchema() error {
 	_, err := Ur.db.pool.Exec(context.Background(), query)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (Ur *Usersrepo) UpdateUserSettings(ctx context.Context, args []any, clauses []string, userID int64) error {
+	args = append(args, userID)
+	query := fmt.Sprintf(
+		"UPDATE accounts.users SET %s WHERE user_id = $%d",
+		strings.Join(clauses, ", "),
+		len(args),
+	)
+
+	if _, err := Ur.db.pool.Exec(ctx, query, args...); err != nil {
+		fmt.Println(err)
+		return errors.New("update has failed: " + err.Error())
 	}
 
 	return nil

@@ -842,6 +842,48 @@ func (a *App) setCountryCode(c *gin.Context) {
 	c.JSON(200, gin.H{"success": true})
 }
 
+// Sets the first, middle or last name to the user's choosing.
+func (a *App) updateProfile(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	var body struct {
+		FirstName  *string `json:"firstName"`
+		MiddleName *string `json:"middleName"`
+		LastName   *string `json:"lastName"`
+	}
+	err := c.ShouldBindJSON(&body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	args := make([]any, 0, 4) //Currently has as cap of 4 due there being 4 settings to update.
+	setClauses := make([]string, 0, 4)
+
+	if body.FirstName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("first_name = $%d", len(args)+1))
+		args = append(args, *body.FirstName)
+	}
+
+	if body.MiddleName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("middle_name = $%d", len(args)+1))
+		args = append(args, *body.MiddleName)
+	} else {
+		setClauses = append(setClauses, fmt.Sprintf("middle_name = $%d", len(args)+1))
+		args = append(args, nil)
+	}
+
+	if body.LastName != nil {
+		setClauses = append(setClauses, fmt.Sprintf("last_name = $%d", len(args)+1))
+		args = append(args, *body.LastName)
+	}
+
+	updateError := a.ur.UpdateUserSettings(context.Background(), args, setClauses, userID.(int64))
+
+	if updateError != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+	}
+
+	c.JSON(200, gin.H{"success": true})
+}
+
 func (a *App) devices(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 

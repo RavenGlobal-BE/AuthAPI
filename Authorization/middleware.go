@@ -43,7 +43,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userID, err := strconv.Atoi(payload.RegisteredClaims.Subject) // Convert userID from string to int
+		userID, err := strconv.ParseInt(payload.RegisteredClaims.Subject, 10, 64) // Convert userID from string to int
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
