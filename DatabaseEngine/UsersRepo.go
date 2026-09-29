@@ -23,17 +23,18 @@ func NewUsersRepo(db *DB) *Usersrepo {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, is_deleted, is_verified from accounts.users where email = $1`, mail)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, middle_name, last_name, publicusername, countrycode, is_verified, profilepicture from accounts.users where email = $1`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
+		&v.MiddleName,
 		&v.LastName,
 		&v.PublicUsername,
 		&v.CountryCode,
-		&v.IsDeleted,
 		&v.IsVerified,
+		&v.ProfilePicture,
 	)
 
 	if err != nil {
@@ -44,19 +45,21 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 }
 
 // It queries the users database based on the
-func (Ur *Usersrepo) GetAccountById(id int) *UserAuth {
+func (Ur *Usersrepo) GetAccountById(id int64) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, last_name, publicusername, countrycode, is_verified from accounts.users where user_id = $1`, id)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, middle_name, last_name, publicusername, countrycode, is_verified, profilepicture from accounts.users where user_id = $1`, id)
 
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
 		&v.Password,
 		&v.FirstName,
+		&v.MiddleName,
 		&v.LastName,
 		&v.PublicUsername,
 		&v.CountryCode,
 		&v.IsVerified,
+		&v.ProfilePicture,
 	)
 
 	if err != nil {
@@ -126,23 +129,13 @@ type UserAuth struct {
 	Email          string
 	Password       string // ArgonID2 (cost 12)
 	FirstName      string
-	LastName       string
+	MiddleName     *string
+	LastName       *string
 	CountryCode    *string
 	PublicUsername *string
 	IsDeleted      int16
 	IsVerified     int16
-}
-
-type User struct {
-	UserID         int64
-	Email          string
-	Password       string // Bycrypted (cost 12)
-	FirstName      string
-	LastName       *string
-	PublicUsername *string
-	CountryCode    string
-	IsDeleted      int16
-	TimeDeletion   *time.Time
+	ProfilePicture *string
 }
 
 func (Ur *Usersrepo) Init() error {

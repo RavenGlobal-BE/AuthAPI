@@ -122,8 +122,13 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 	sessionID := *sidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, client.ClientID)
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, client.ClientID)
+	var lastName = ""
+	if user.LastName != nil {
+		lastName = *user.LastName
+	}
+
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, lastName, "refresh", time.Now().Add(14*24*time.Hour), loginData.Nonce, sessionID, *user.CountryCode, client.ClientID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, lastName, "access", time.Now().Add(15*time.Minute), loginData.Nonce, sessionID, *user.CountryCode, client.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"success": false, "reason": "Failed to generate tokens"})
 		return
@@ -189,7 +194,7 @@ func (a *App) dbtest(c *gin.Context) { //Tests user authentication
 		return
 	}
 
-	user := a.ur.GetAccountById(userID.(int))
+	user := a.ur.GetAccountById(userID.(int64))
 
 	if user == nil {
 		c.JSON(404, gin.H{"error": "user not found"})
@@ -310,7 +315,7 @@ func (a *App) token(c *gin.Context) {
 	}
 
 	// Look up the user to get their details for the JWT
-	userIDInt, parseErr := strconv.Atoi(authData["user_id"])
+	userIDInt, parseErr := strconv.ParseInt(authData["user_id"], 10, 64)
 	if parseErr != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -332,12 +337,17 @@ func (a *App) token(c *gin.Context) {
 	}
 	tokenSessionID := *tokenSidPtr
 
-	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, client.ClientID)
+	var lastName = ""
+	if user.LastName != nil {
+		lastName = *user.LastName
+	}
+
+	refreshToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, lastName, "refresh", time.Now().Add(14*24*time.Hour), nonce, tokenSessionID, *user.CountryCode, client.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
 	}
-	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, user.LastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, client.ClientID)
+	accessToken, err := auth.GenerateJWTToken(user.UserID, user.Email, user.FirstName, lastName, "access", time.Now().Add(15*time.Minute), nonce, tokenSessionID, *user.CountryCode, client.ClientID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return
@@ -408,9 +418,9 @@ func (a *App) refresh(c *gin.Context) {
 	}
 
 	if req.UpdateInfo {
-		updatedInfo := a.ur.GetAccountById(int(parsedID))
+		updatedInfo := a.ur.GetAccountById(parsedID)
 		if updatedInfo != nil {
-			userData.LastName = updatedInfo.LastName
+			userData.LastName = *updatedInfo.LastName
 			userData.FirstName = updatedInfo.FirstName
 			userData.Email = updatedInfo.Email
 			userData.Country = updatedInfo.CountryCode
@@ -541,7 +551,7 @@ func (a *App) userinfo(c *gin.Context) {
 		return
 	}
 
-	userIDInt, err := strconv.Atoi(sessionData["user_id"])
+	userIDInt, err := strconv.ParseInt(sessionData["user_id"], 10, 64)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Invalid session data"})
 		return
