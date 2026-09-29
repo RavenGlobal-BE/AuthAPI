@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -68,6 +69,25 @@ func UploadImageToCDN(ctx context.Context, fileName, contentType string, data []
 	if res.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(io.LimitReader(res.Body, 1024))
 		return fmt.Errorf("bunny upload failed: %s: %s", res.Status, body)
+	}
+	return nil
+}
+
+func RemoveImageFromCDN(ctx context.Context, fileName string) error {
+	host := os.Getenv("BUNNY_STORAGE_HOST")
+	zone := os.Getenv("BUNNY_STORAGE_ZONE")
+	key := os.Getenv("BUNNY_STORAGE_PASSWORD")
+
+	url := fmt.Sprintf("https://%s/%s/%s", host, zone, fileName)
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
+	req.Header.Set("AccessKey", key)
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return errors.New("image deletion failed")
 	}
 	return nil
 }

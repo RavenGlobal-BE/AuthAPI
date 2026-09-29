@@ -25,6 +25,8 @@ func (a *App) uploadPhoto(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Invalid token"})
 	}
 
+	user := a.ur.GetAccountById(userID.(int64))
+
 	fh, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing or invalid file"})
@@ -88,6 +90,12 @@ func (a *App) uploadPhoto(c *gin.Context) {
 		log.Printf("cdn upload: %v", err)
 		c.JSON(http.StatusBadGateway, gin.H{"error": "upload failed"})
 		return
+	}
+
+	if &user.ProfilePicture != nil {
+		if err := SecureInput.RemoveImageFromCDN(c.Request.Context(), *user.ProfilePicture); err != nil {
+			log.Printf("cdn remove: %v", err)
+		}
 	}
 
 	updateError := a.ur.UpdatePhoto(context.Background(), name, userID.(int64))
