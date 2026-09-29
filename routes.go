@@ -900,9 +900,6 @@ func (a *App) devices(c *gin.Context) {
 	c.JSON(200, gin.H{"devices": devices})
 }
 
-var tokenBlacklistedError = errors.New("Token blacklisted")
-var clientNotFoundError = errors.New("Client ID does not exist")
-
 func (a *App) introspectToken(AccessToken string) (bool, error) {
 	claims, err := auth.ValidateToken(AccessToken)
 	if err != nil {
@@ -914,12 +911,12 @@ func (a *App) introspectToken(AccessToken string) (bool, error) {
 	sessionKey := fmt.Sprintf("session:%s:%s", claims.Subject, claims.SessionID)
 	session, sessionErr := a.userRedis.GetSessionByID(context.Background(), sessionKey)
 	if sessionErr != nil || session["blacklisted"] == "1" {
-		return false, tokenBlacklistedError
+		return false, errors.New("Token blacklisted")
 	}
 
 	client := a.cr.GetClientByID(context.Background(), claims.Audience[0])
 	if client == nil {
-		return false, clientNotFoundError
+		return false, errors.New("Client ID does not exist")
 	}
 
 	return true, nil

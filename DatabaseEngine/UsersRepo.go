@@ -282,3 +282,19 @@ func (Ur *Usersrepo) UpdateUserSettings(ctx context.Context, args []any, clauses
 
 	return nil
 }
+
+func (Ur *Usersrepo) UpdatePhoto(ctx context.Context, newFileName string, userID int64) error {
+	if _, err := Ur.db.pool.Exec(ctx, `UPDATE accounts.users SET profilepicture = $1 WHERE user_id = $2`, newFileName, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (Ur *Usersrepo) RemovePhoto(ctx context.Context, userID int64) error {
+	if _, err := Ur.db.pool.Exec(ctx, `UPDATE accounts.users SET profilepicture = NULL WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
