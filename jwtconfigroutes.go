@@ -50,7 +50,7 @@ func OpenIDConfig(c *gin.Context) {
 }
 
 func (A *App) todayBG(c *gin.Context) {
-	c.JSON(200, gin.H{"bg": "https://cdn.raven.co.com/authPhotos/Malta.JPG", "photoBy": "Kenza", "Location": "Marsaxlokk", "Country": "MT"})
+	c.JSON(200, gin.H{"bg": "https://cdn-p1.raven.co.com/particle/wallpaper/04CA4C3F-0784-46D5-95D9-43A852493C4D.jpg", "photoBy": "Farshad Chowdhury", "Location": "Lauterbrunnen", "Country": "CH"})
 }
 
 func (a *App) clientInfo(c *gin.Context) {

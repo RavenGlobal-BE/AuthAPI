@@ -564,12 +564,14 @@ func (a *App) userinfo(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"userID":     user.UserID,
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
-		"country":    user.CountryCode,
-		"username":   user.PublicUsername,
+		"userID":      user.UserID,
+		"email":       user.Email,
+		"first_name":  user.FirstName,
+		"middle_name": user.MiddleName,
+		"last_name":   user.LastName,
+		"country":     user.CountryCode,
+		"username":    user.PublicUsername,
+		"profile":     user.ProfilePicture,
 	})
 }
 

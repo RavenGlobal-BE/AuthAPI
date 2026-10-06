@@ -44,7 +44,7 @@ FRONTEND_URL="https://auth.raven.co.com" #Used to redirect users to the website 
 ENVIRONMENT="DEVELOPMENT" #Can either be "DEVELOPMENT", "RELEASE" or "TESTING"
 PORT=3000
 
-#CDN Setup (Required as of Beta 1)
+#CDN Setup (Required as of 26.3 Beta 1)
 BUNNY_STORAGE_HOST=""
 BUNNY_STORAGE_ZONE=""
 BUNNY_STORAGE_PASSWORD=""
