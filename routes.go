@@ -543,7 +543,7 @@ func (a *App) userinfo(c *gin.Context) {
 		return
 	}
 
-	redisKey := fmt.Sprintf("session:%d:%s", userID.(int), sessionID.(string))
+	redisKey := fmt.Sprintf("session:%d:%s", userID.(int64), sessionID.(string))
 
 	sessionData, err := a.userRedis.GetSessionByID(context.Background(), redisKey)
 	if err != nil {
