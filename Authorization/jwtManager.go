@@ -104,46 +104,24 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 		return nil, err
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
-		if token.Method.Alg() != jwt.SigningMethodEdDSA.Alg() {
-			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
-		}
-
-		token, err := jwt.ParseWithClaims(tokenString, claims,
-			func(token *jwt.Token) (any, error) {
-				kid, ok := token.Header["kid"].(string)
-				if !ok || kid == "" {
-					return nil, errors.New("missing kid header")
-				}
-				if kid != os.Getenv("JWT_KID") {
-					return nil, fmt.Errorf("unknown kid: %s", kid)
-				}
-				return publicKey, nil
-			},
-			jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
-			jwt.WithIssuer(os.Getenv("JWT_ISSUER")),
-			jwt.WithExpirationRequired(), // also enforces exp/nbf/iat
-		)
-		if err != nil {
-			logger.Log(err.Error(), logger.Debug)
-			return nil, err
-		}
-
-		if claims.Audience == nil { // Check whether the token is really meant for "Raven Original" services.
-			return nil, errors.New("invalid token audience")
-		}
-
-		if claims.ExpiresAt.Before(time.Now()) { //Checks whether the token is expired
-			return nil, errors.New("token has expired")
-		}
-
-		if claims.TokenType != "access" && claims.TokenType != "refresh" { //Checks whether it's a valid type of token
-			return nil, errors.New("invalid token type")
-		}
-
-		return publicKey, nil
-	})
-
+	token, err := jwt.ParseWithClaims(tokenString, claims,
+		// Key function: only picks the key
+		func(token *jwt.Token) (any, error) {
+			kid, ok := token.Header["kid"].(string)
+			if !ok || kid == "" {
+				return nil, errors.New("missing kid header")
+			}
+			if kid != os.Getenv("JWT_KID") {
+				return nil, fmt.Errorf("unknown kid: %s", kid)
+			}
+			return publicKey, nil
+		},
+		// Parser options: the library enforces these
+		jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
+		jwt.WithIssuer(os.Getenv("JWT_ISSUER")),
+		jwt.WithAudience("raven-original"), // replace with your real audience value
+		jwt.WithExpirationRequired(),
+	)
 	if err != nil {
 		logger.Log(err.Error(), logger.Debug)
 		return nil, err
@@ -151,6 +129,11 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 
 	if !token.Valid {
 		return nil, errors.New("invalid token")
+	}
+
+	// Custom claim checks
+	if claims.TokenType != "access" && claims.TokenType != "refresh" {
+		return nil, errors.New("invalid token type")
 	}
 
 	return claims, nil
