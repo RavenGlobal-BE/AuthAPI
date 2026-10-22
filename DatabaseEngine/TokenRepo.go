@@ -10,6 +10,8 @@ import (
 	"time"
 
 	logger "raven/auth/Logging"
+
+	"github.com/redis/go-redis/v9"
 )
 
 /* This token engine utilizes Redis database 0. KEEP THAT IN MIND WHEN TRYING TO DEBUG */
@@ -94,12 +96,25 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 }
 
 // InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
-func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID int64, data map[string]interface{}, ttl time.Duration) {
-	sessionKey := "session:" + strconv.FormatInt(userID, 10) + ":" + sessionID
-	setKey := "user:sessions:" + strconv.FormatInt(userID, 10)
-	tr.redis.client.HSet(ctx, sessionKey, data)
-	tr.redis.client.SAdd(ctx, setKey, sessionID)
-	tr.redis.client.Expire(ctx, sessionKey, ttl)
+func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID int64, data map[string]interface{}, ttl time.Duration) error {
+	uid := strconv.FormatInt(userID, 10)
+	sessionKey := "session:" + uid + ":" + sessionID
+	setKey := "user:sessions:v2:" + uid
+	now := time.Now()
+
+	pipe := tr.redis.client.TxPipeline()
+	pipe.HSet(ctx, sessionKey, data)
+	pipe.Expire(ctx, sessionKey, ttl)
+	pipe.ZAdd(ctx, setKey, redis.Z{Score: float64(now.Add(ttl).Unix()), Member: sessionID})
+	pipe.ZRemRangeByScore(ctx, setKey, "-inf", strconv.FormatInt(now.Unix(), 10)) // drop expired IDs
+	pipe.Expire(ctx, setKey, ttl)
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+// Removes all sessions from a given user
+func (tr *TokenRepo) BlacklistAll(ctx context.Context, userID int64, sidExcemption string) {
+
 }
 
 func (tr *TokenRepo) CreateSessionData(userID int64, clientID, deviceModel, deviceName, language string, blacklisted bool, location map[string]interface{}) map[string]interface{} {
@@ -121,8 +136,16 @@ func (tr *TokenRepo) CreateSessionData(userID int64, clientID, deviceModel, devi
 	}
 }
 
-func (tr *TokenRepo) ExtendSession(ctx context.Context, sessionID string) {
-	tr.redis.client.Expire(ctx, sessionID, 14*24*time.Hour)
+func (tr *TokenRepo) ExtendSession(ctx context.Context, userID int64, sessionID string) error {
+	UID := strconv.FormatInt(userID, 10)
+
+	pipe := tr.redis.client.TxPipeline()
+
+	pipe.Expire(ctx, sessionID, 14*24*time.Hour)
+	pipe.Expire(ctx, "user:sessions:"+UID, 14*24*time.Hour)
+
+	_, err := pipe.Exec(ctx)
+	return err
 }
 
 // Deletes a refresh token from Redis (used during rotation).

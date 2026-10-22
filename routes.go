@@ -458,14 +458,14 @@ func (a *App) refresh(c *gin.Context) {
 
 				sessionData := a.userRedis.CreateSessionData(parsedID, tokenData["client_id"], "", "", "", false, location)
 
-				a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, sessionData, 14*24*time.Hour)
+				_ = a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, sessionData, 14*24*time.Hour)
 				response["access_token"] = newAccessToken
 				response["refresh_token"] = newRefreshToken
 			}
 		}
 	} else {
 		sessionKey := fmt.Sprintf("session:%d:%s", parsedID, claims.SessionID)
-		a.userRedis.ExtendSession(context.Background(), sessionKey)
+		_ = a.userRedis.ExtendSession(context.Background(), parsedID, sessionKey)
 	}
 
 	c.JSON(200, response)
@@ -576,7 +576,7 @@ func (a *App) userinfo(c *gin.Context) {
 	})
 }
 
-// Resets the user's password (ONLY BE RAN AFTER THE TOKEN IS GUARENTEED TO BE AVAILABLE)
+// Resets the user's password. All redis tokens will be removed.,
 func (a *App) resetPassword(c *gin.Context) {
 	var req struct {
 		Token    string `json:"token"`
