@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-//var InvalidEmailError = errors.New("Invalid E-Mail")
+// var InvalidEmailError = errors.New("Invalid E-Mail")
+var SupportedLangs = []string{"en", "ar", "fi", "fr", "es", "nl"}
 
 // Tests an email for basic validity
 func EmailIsValid(email string) bool {

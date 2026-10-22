@@ -112,6 +112,7 @@ func (ms *MailService) ResetPasswordEmail(recipient, name, token, lang string) {
 		"fi": "Salasanan nollaus",
 		"fr": "Réinitialiser votre mot de passe",
 		"es": "Restablecer contraseña",
+		"nl": "Wachtwoord resetten",
 	}
 
 	subject, ok := subjects[lang]

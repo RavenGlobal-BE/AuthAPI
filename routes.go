@@ -12,6 +12,7 @@ import (
 	config "raven/auth/Config"
 	logger "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -622,6 +623,10 @@ func (a *App) requestReset(c *gin.Context) {
 		return
 	}
 
+	if !slices.Contains(mailer.SupportedLangs, language) {
+		language = "en" // Implicitly changes the language to English (default)
+	}
+
 	user := a.ur.GetAccountByEmail(mail)
 	if user == nil { //If the user isn't found, we don't want to tell them that, so we just return
 		c.JSON(200, gin.H{"message": "Reset email sent successfully."})
@@ -636,7 +641,7 @@ func (a *App) requestReset(c *gin.Context) {
 
 	logger.Log("Key inserted: "+key, logger.Debug)
 
-	a.mailService.ResetPasswordEmail(mail, user.FirstName, key, language)
+	go a.mailService.ResetPasswordEmail(mail, user.FirstName, key, language)
 	c.JSON(200, gin.H{"message": "Reset email sent successfully."})
 }
 
