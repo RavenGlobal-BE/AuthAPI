@@ -7,8 +7,8 @@ package Config
 var AllowVerbose bool = false
 
 // Version & Build
-var Version = "26.3"
-var Build float32 = 31
+var Version = "26.3.1"
+var Build float32 = 35
 
 // Server configurations
 // Port has been migrated to .env

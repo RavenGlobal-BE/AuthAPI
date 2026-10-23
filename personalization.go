@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"raven/auth/SecureInput"
+	"time"
 	"uuid"
 
 	"github.com/gin-gonic/gin"
@@ -107,16 +108,38 @@ func (a *App) uploadPhoto(c *gin.Context) {
 }
 
 func (a *App) removePhoto(c *gin.Context) {
-	userID, exists := c.Get("user_id")
-	if exists != true {
-		c.JSON(400, gin.H{"error": "Invalid token"})
+	raw, exists := c.Get("user_id")
+	userID, ok := raw.(int64)
+	if !exists || !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		return
 	}
 
-	err := a.ur.RemovePhoto(context.Background(), userID.(int64))
+	// Grab the current photo URL BEFORE clearing it.
+	acc := a.ur.GetAccountById(userID)
+	if acc == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		return
+	}
+	profile := acc.ProfilePicture
+	if *profile == "" {
+		c.JSON(http.StatusOK, gin.H{"success": true}) // nothing to remove
+		return
+	}
 
-	if err != nil {
+	if err := a.ur.RemovePhoto(c.Request.Context(), userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to remove photo"})
+		return
 	}
 
-	c.JSON(200, gin.H{"success": true})
+	// CDN cleanup in the background: don't touch c, use a detached context.
+	go func(url string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := SecureInput.RemoveImageFromCDN(ctx, url); err != nil {
+			log.Printf("CDN cleanup failed for user %d (%s): %v", userID, url, err)
+		}
+	}(*profile)
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
