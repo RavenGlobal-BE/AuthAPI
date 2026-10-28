@@ -458,9 +458,15 @@ func (a *App) refresh(c *gin.Context) {
 
 				sessionData := a.userRedis.CreateSessionData(parsedID, tokenData["client_id"], "", "", "", false, location)
 
-				_ = a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, sessionData, 14*24*time.Hour)
+				err = a.userRedis.InsertSession(context.Background(), newSessionID, parsedID, sessionData, 14*24*time.Hour)
 				response["access_token"] = newAccessToken
 				response["refresh_token"] = newRefreshToken
+
+				if err != nil {
+					if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+						logger.Log("[POST /refresh] "+err.Error(), logger.Error)
+					}
+				}
 			}
 		}
 	} else {
@@ -683,6 +689,8 @@ func (a *App) authorize(c *gin.Context) {
 		return
 	}
 
+	logger.Log(fmt.Sprintf("[/authorize] host=%s cookie=%q", c.Request.Host, c.GetHeader("Cookie")), logger.Debug)
+
 	loginValues := url.Values{}
 	loginValues.Set("client_id", clientID)
 	loginValues.Set("redirect_uri", redirectURI)
@@ -744,6 +752,9 @@ func (a *App) authorize(c *gin.Context) {
 
 	// If neither cookie exists, send to "login" immediately
 	if accessCookie == "" && refreshCookie == "" {
+		if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+			logger.Log("[POST /authorize] Access cookie not set", logger.Error)
+		}
 		c.Redirect(302, loginURL)
 		return
 	}
@@ -753,6 +764,9 @@ func (a *App) authorize(c *gin.Context) {
 	if err != nil || cookieDetails.ExpiresAt.Before(time.Now()) || cookieDetails.TokenType != "access" {
 		// Access token invalid or expired — try the refresh token
 		if refreshCookie == "" {
+			if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+				logger.Log("[POST /authorize] Cookie expired", logger.Warning)
+			}
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.Redirect(302, loginURL)
 			return
@@ -760,6 +774,10 @@ func (a *App) authorize(c *gin.Context) {
 
 		refreshClaims, refreshErr := auth.ValidateToken(refreshCookie)
 		if refreshErr != nil || refreshClaims.TokenType != "refresh" {
+			if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+				logger.Log("[POST /authorize] Cookie expired", logger.Warning)
+			}
+
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 			c.Redirect(302, loginURL)
@@ -769,6 +787,9 @@ func (a *App) authorize(c *gin.Context) {
 		// Check Redis: token must exist and not be blacklisted
 		tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), refreshCookie)
 		if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
+			if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+				logger.Log("[POST /authorize] Session blacklisted", logger.Error)
+			}
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 			c.Redirect(302, loginURL)
@@ -831,6 +852,9 @@ func (a *App) authorize(c *gin.Context) {
 	}
 
 	// Redirect back to the third-party app with the auth code
+	if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+		logger.Log("[POST /authorize] Redirecting to app...", logger.Info)
+	}
 	redirect := fmt.Sprintf("%s?code=%s&state=%s", redirectURI, url.QueryEscape(*code), url.QueryEscape(state))
 	fmt.Println("Redirecting to: " + redirect)
 	c.Redirect(302, redirect)
