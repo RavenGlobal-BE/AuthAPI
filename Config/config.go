@@ -8,7 +8,7 @@ var AllowVerbose bool = false
 
 // Version & Build
 var Version = "26.3.1"
-var Build float32 = 35
+var Build float32 = 37
 
 // Server configurations
 // Port has been migrated to .env
