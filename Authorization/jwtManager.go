@@ -119,7 +119,6 @@ func ValidateToken(tokenString string) (*JWTPayload, error) {
 		// Parser options: the library enforces these
 		jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
 		jwt.WithIssuer(os.Getenv("JWT_ISSUER")),
-		jwt.WithAudience("raven-original"), // replace with your real audience value
 		jwt.WithExpirationRequired(),
 	)
 	if err != nil {
