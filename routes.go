@@ -522,6 +522,7 @@ func (a *App) register(c *gin.Context) {
 	mailError := a.mailService.AccountVerificationEmail(req.Email, req.FirstName, key, req.Language)
 	if mailError != nil {
 		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
 	}
 
 	c.JSON(200, gin.H{"message": "Registered successfully."})
