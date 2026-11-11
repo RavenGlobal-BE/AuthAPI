@@ -13,13 +13,21 @@ var tmplFS embed.FS
 //go:embed locales/*.json
 var localeFS embed.FS
 
+var langs = make(map[string]*Locale)
+
 func loadLocale(lang string) (Locale, error) {
+	if langs[lang] != nil {
+		return *langs[lang], nil
+	}
+
 	var loc Locale
 	data, err := localeFS.ReadFile("locales/" + lang + ".json")
 	if err != nil {
 		return loc, err // no such language
 	}
 	err = json.Unmarshal(data, &loc)
+
+	langs[lang] = &loc //Saves it in a dictionary for faster pulling
 	return loc, err
 }
 
