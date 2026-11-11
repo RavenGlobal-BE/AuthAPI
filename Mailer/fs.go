@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json/v2"
-	"fmt"
 	"html/template"
 )
 
@@ -15,9 +14,8 @@ var tmplFS embed.FS
 var localeFS embed.FS
 
 func loadLocale(lang string) (Locale, error) {
-	fmt.Println(lang)
 	var loc Locale
-	data, err := localeFS.ReadFile("locales/" + lang + ".json") // e.g. "locales/fr.json"
+	data, err := localeFS.ReadFile("locales/" + lang + ".json")
 	if err != nil {
 		return loc, err // no such language
 	}
