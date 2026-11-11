@@ -79,6 +79,13 @@ func (a *App) handleLogin(c *gin.Context) {
 		setup = append(setup, "countryCode")
 	}
 
+	// Else...
+	result := auth.CheckPasswordHash(loginData.Password, user.Password)
+	if result == false {
+		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
+		return
+	}
+
 	if user.IsVerified == 0 {
 		//SignUpInsert simulates a signup process to send the user their verification email.
 		key, err := a.userRedis.SignUpInsert(context.Background(), user.Email)
@@ -92,13 +99,6 @@ func (a *App) handleLogin(c *gin.Context) {
 		logger.Log(fmt.Sprintf("%s/%s/verify?code=%s\n", os.Getenv("FRONTEND_URL"), loginData.Language, key), logger.Debug)
 		a.mailService.AccountVerificationEmail(loginData.Email, user.FirstName, key, loginData.Language)
 		c.JSON(401, gin.H{"success": false, "reason": "verification_pending"})
-		return
-	}
-
-	// Else...
-	result := auth.CheckPasswordHash(loginData.Password, user.Password)
-	if result == false {
-		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
 	}
 
