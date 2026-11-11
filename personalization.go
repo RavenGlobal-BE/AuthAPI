@@ -17,10 +17,11 @@ import (
 	_ "image/png"
 )
 
-const maxUpload = 8 << 20
+const maxUpload = 4 << 20
 
 func (a *App) uploadPhoto(c *gin.Context) {
 	userID, exists := c.Get("user_id")
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUpload+1<<20)
 
 	if exists != true {
 		c.JSON(400, gin.H{"error": "Invalid token"})
@@ -31,6 +32,11 @@ func (a *App) uploadPhoto(c *gin.Context) {
 	fh, err := c.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing or invalid file"})
+		return
+	}
+
+	if fh.Size > maxUpload {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "file too large"})
 		return
 	}
 
