@@ -84,7 +84,7 @@ func (ms *MailService) AccountVerificationEmail(recipient, name, token, lang str
 		}
 	}
 
-	link := fmt.Sprintf("%s/%s/accountRecovery/password?resetcode=%s",
+	link := fmt.Sprintf("%s/%s/verify?code=%s",
 		os.Getenv("FRONTEND_URL"), lang, url.QueryEscape(token))
 
 	html, err := renderPage("mailVerification", emailData{
@@ -93,7 +93,7 @@ func (ms *MailService) AccountVerificationEmail(recipient, name, token, lang str
 		Name: name,
 		Link: link,
 		Year: time.Now().Year(),
-		E:    loc.AccountVerification, // AccountVerificationEmail passes loc.AccountVerification
+		E:    loc.AccountVerification,
 		T:    loc,
 	})
 	if err != nil {
@@ -121,7 +121,7 @@ func (ms *MailService) ResetPasswordEmail(recipient, name, token, lang string) e
 		Name: name,
 		Link: link,
 		Year: time.Now().Year(),
-		E:    loc.ResetPassword, // AccountVerificationEmail passes loc.AccountVerification
+		E:    loc.ResetPassword,
 		T:    loc,
 	})
 	if err != nil {
