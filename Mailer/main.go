@@ -12,15 +12,8 @@ import (
 	"net/url"
 	"os"
 	logger "raven/auth/Logging"
-	"strings"
 	"time"
 )
-
-//go:embed templates/mailVerification.html
-var mailVerificationTemplate string
-
-//go:embed templates/resetPassword.html
-var resetPasswordTemplate string
 
 type MailService struct {
 	smtpAuth smtp.Auth
@@ -41,28 +34,8 @@ func NewSmtpService(username string, password string, host string) *MailService 
 	}
 }
 
-var templates = map[string]string{
-	"mailVerification": mailVerificationTemplate,
-	"resetPassword":    resetPasswordTemplate,
-}
-
 var funcs = template.FuncMap{
 	"raw": func(s string) template.HTML { return template.HTML(s) }, // only for the template's own markup, never user data
-}
-
-func (ms *MailService) prepareTemplate(templateName string, data map[string]string) string {
-	raw, ok := templates[templateName]
-	if !ok {
-		logger.Log("Unknown email template: "+templateName, logger.Error)
-		return ""
-	}
-
-	html := raw
-	for key, value := range data {
-		html = strings.ReplaceAll(html, "{"+key+"}", value)
-	}
-
-	return html
 }
 
 func (ms *MailService) Send(subject, recipient, html string) error {
