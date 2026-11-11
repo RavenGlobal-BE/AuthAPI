@@ -155,21 +155,4 @@ func displayConfigs() {
 	logging.Log(fmt.Sprintf("Mail User: %s", os.Getenv("MailUser")), logging.Debug)
 	logging.Log(fmt.Sprintf("Mail Password: %s", os.Getenv("MailPassword")), logging.Debug)
 	logging.Log(fmt.Sprintf("Mail Server: %s", os.Getenv("MailServer")), logging.Debug)
-
-	if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
-		token, _ := auth.GenerateJWTToken(
-			2035872413979250688,                // userID (sub)
-			"imad@raven.co.com",                // email
-			"Imad",                             // firstName
-			"Amroug",                           // lastName
-			"access",                           // access (token_type)
-			time.Unix(1798747095, 0),           // expiration (exp)
-			"b93TD9T5CHPlTtySHEvCp172coeskrtO", // nonce
-			"0965c3377da8cb95b27ba02b04292dbf4640f3d988da7644e79e285f6d1bd11a", // sessionID (sid)
-			"BE",           // country
-			"particle-ios", // audience (aud[0])
-		)
-
-		logging.Log(token, logging.Debug)
-	}
 }
