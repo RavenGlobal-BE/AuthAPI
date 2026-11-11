@@ -648,6 +648,7 @@ func (a *App) resetPassword(c *gin.Context) {
 	err = a.userRedis.RevokeAllSessions(context.Background(), user.UserID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
 	}
 
 	hashedPass, err := auth.HashPassword(c.Request.Context(), req.Password)

@@ -83,7 +83,10 @@ func RemoveImageFromCDN(ctx context.Context, fileName string) error {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	req.Header.Set("AccessKey", key)
 
-	res, _ := http.DefaultClient.Do(req)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
 
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
