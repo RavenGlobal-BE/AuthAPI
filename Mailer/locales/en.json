@@ -1,0 +1,33 @@
+{
+  "meta": { "dir": "ltr" },
+
+  "account_verification": {
+    "subject": "Verify your account",
+    "preheader": "Confirm your email to finish setting up your Raven account.",
+    "heading": "Please verify your email",
+    "greeting": "Hi %s,",
+    "intro": "Thank you for signing up to Raven. To finish your registration, please confirm your email address using the button below.",
+    "button": "Verify email",
+    "fallback_label": "Button not working? Copy and paste this link into your browser:",
+    "expiry": "This link expires in 24 hours.",
+    "disclaimer": "You're receiving this email because someone signed up for Raven with this address. If that wasn't you, you can safely ignore it. The unverified sign-up will be deleted after 7 days."
+  },
+
+  "password_reset": {
+    "subject": "Reset your password",
+    "preheader": "Use this link to reset your Raven password.",
+    "heading": "Reset your password",
+    "greeting": "Hi %s,",
+    "intro": "We received a request to reset the password for your Raven account. Use the button below to choose a new one.",
+    "button": "Reset password",
+    "fallback_label": "Button not working? Copy and paste this link into your browser:",
+    "expiry": "This link expires in 2.5 hours.",
+    "disclaimer": "If you didn't request a password reset, you can safely ignore this email. Your password won't change."
+  },
+
+  "footer": {
+    "question": "Have a question?",
+    "kb_link": "Visit our Knowledge Base",
+    "rights": "All rights reserved."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "meta": { "dir": "ltr" },
+
+  "account_verification": {
+    "subject": "Verifica tu cuenta",
+    "preheader": "Confirma tu correo electrónico para terminar de configurar tu cuenta de Raven.",
+    "heading": "Verifica tu correo electrónico",
+    "greeting": "Hola, %s:",
+    "intro": "Gracias por registrarte en Raven. Para completar tu registro, confirma tu dirección de correo electrónico con el botón de abajo.",
+    "button": "Verificar correo",
+    "fallback_label": "¿El botón no funciona? Copia y pega este enlace en tu navegador:",
+    "expiry": "Este enlace caduca en 24 horas.",
+    "disclaimer": "Recibes este correo porque alguien se registró en Raven con esta dirección. Si no fuiste tú, puedes ignorarlo sin problema. El registro sin verificar se eliminará en 7 días."
+  },
+
+  "password_reset": {
+    "subject": "Restablece tu contraseña",
+    "preheader": "Usa este enlace para restablecer tu contraseña de Raven.",
+    "heading": "Restablece tu contraseña",
+    "greeting": "Hola, %s:",
+    "intro": "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta de Raven. Usa el botón de abajo para elegir una nueva.",
+    "button": "Restablecer contraseña",
+    "fallback_label": "¿El botón no funciona? Copia y pega este enlace en tu navegador:",
+    "expiry": "Este enlace caduca en 2 horas y media.",
+    "disclaimer": "Si no solicitaste restablecer tu contraseña, puedes ignorar este correo sin problema. Tu contraseña no cambiará."
+  },
+
+  "footer": {
+    "question": "¿Tienes alguna pregunta?",
+    "kb_link": "Visita nuestra base de conocimientos",
+    "rights": "Todos los derechos reservados."
+  }
+}

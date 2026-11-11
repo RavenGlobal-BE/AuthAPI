@@ -1,0 +1,33 @@
+{
+  "meta": { "dir": "ltr" },
+
+  "account_verification": {
+    "subject": "Vahvista tilisi",
+    "preheader": "Vahvista sähköpostiosoitteesi viimeistelläksesi Raven-tilisi käyttöönoton.",
+    "heading": "Vahvista sähköpostiosoitteesi",
+    "greeting": "Hei %s,",
+    "intro": "Kiitos, että rekisteröidyit Raveniin. Viimeistele rekisteröityminen vahvistamalla sähköpostiosoitteesi alla olevalla painikkeella.",
+    "button": "Vahvista sähköposti",
+    "fallback_label": "Eikö painike toimi? Kopioi ja liitä tämä linkki selaimeesi:",
+    "expiry": "Tämä linkki vanhenee 24 tunnin kuluttua.",
+    "disclaimer": "Saat tämän viestin, koska joku rekisteröityi Raveniin tällä osoitteella. Jos se et ollut sinä, voit turvallisesti jättää viestin huomiotta. Vahvistamaton rekisteröityminen poistetaan 7 päivän kuluttua."
+  },
+
+  "password_reset": {
+    "subject": "Nollaa salasanasi",
+    "preheader": "Käytä tätä linkkiä Raven-salasanasi nollaamiseen.",
+    "heading": "Nollaa salasanasi",
+    "greeting": "Hei %s,",
+    "intro": "Saimme pyynnön nollata Raven-tilisi salasanan. Valitse uusi salasana alla olevalla painikkeella.",
+    "button": "Nollaa salasana",
+    "fallback_label": "Eikö painike toimi? Kopioi ja liitä tämä linkki selaimeesi:",
+    "expiry": "Tämä linkki vanhenee 2,5 tunnin kuluttua.",
+    "disclaimer": "Jos et pyytänyt salasanan nollausta, voit turvallisesti jättää tämän viestin huomiotta. Salasanasi ei muutu."
+  },
+
+  "footer": {
+    "question": "Onko sinulla kysyttävää?",
+    "kb_link": "Tutustu tietopankkiimme",
+    "rights": "Kaikki oikeudet pidätetään."
+  }
+}

@@ -12,7 +12,6 @@ import (
 	config "raven/auth/Config"
 	logger "raven/auth/Logging"
 	mailer "raven/auth/Mailer"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -627,10 +626,6 @@ func (a *App) requestReset(c *gin.Context) {
 	if !mailer.EmailIsValid(mail) {
 		c.JSON(400, gin.H{"error": "Invalid email"})
 		return
-	}
-
-	if !slices.Contains(mailer.SupportedLangs, language) {
-		language = "en" // Implicitly changes the language to English (default)
 	}
 
 	user := a.ur.GetAccountByEmail(mail)

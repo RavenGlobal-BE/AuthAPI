@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="{{.Lang}}" dir="{{.Dir}}" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title>{{.E.Subject}}</title>
+    {{raw `<!--[if mso]>
+    <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+    <![endif]-->`}}
+    {{/* Red Hat Display: Apple Mail, Outlook for Mac, Samsung Mail, Thunderbird. Others fall back to Arial. */}}
+    {{raw `<!--[if !mso]><!-->`}}
+    <style>
+        @font-face {
+            font-family: 'Red Hat Display';
+            src: url('https://cdn-p1.raven.co.com/misc/redhat.woff2') format('woff2');
+            font-weight: 300 900;
+            font-style: normal;
+        }
+    </style>
+    {{raw `<!--<![endif]-->`}}
+    {{raw `<!--[if mso]>
+    <style>
+        h1, p, td, a, span { font-family: Arial, Helvetica, sans-serif !important; }
+    </style>
+    <![endif]-->`}}
+    <style>
+        body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+        @media screen and (max-width: 620px) {
+            .card-pad { padding-left: 20px !important; padding-right: 20px !important; }
+            .h1 { font-size: 24px !important; line-height: 30px !important; }
+        }
+    </style>
+</head>
+
+<body style="margin:0; padding:0; background-color:#FFFFFF;">
+
+<div style="display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
+    {{.E.Preheader}}
+    &#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;&#8204;&nbsp;
+</div>
+
+{{/* dir is repeated here because Gmail drops the attributes on <html> */}}
+<table role="presentation" dir="{{.Dir}}" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFFFFF;">
+    <tr>
+        <td align="center" style="padding:20px 10px 30px 10px;">
+
+            {{raw `<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->`}}
+
+            <table role="presentation" dir="{{.Dir}}" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; margin:0 auto;">
+
+                <!-- Logo row -->
+                <tr>
+                    <td style="padding:0 0 20px 0;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="vertical-align:middle;">
+                                    <img src="https://cdn-p1.raven.co.com/misc/raven-bird.png" alt="Raven" width="50"
+                                         style="display:block; width:50px; height:auto; border:0;">
+                                </td>
+                                <td style="vertical-align:middle; padding:0 12px; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-weight:bold; font-size:26px; line-height:24px; color:#000000;">
+                                    Secure
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Card -->
+                <tr>
+                    <td class="card-pad" bgcolor="#FAFAFA"
+                        style="background-color:#FAFAFA; border-radius:10px; padding:32px 30px 24px 30px;">
+
+                        <h1 class="h1"
+                            style="margin:0 0 16px 0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:28px; line-height:34px; font-weight:bold; color:#222222;">
+                            {{.E.Heading}}</h1>
+
+                        {{if .Name}}
+                        <p style="margin:0 0 8px 0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#333333;">
+                            {{printf .E.Greeting .Name}}</p>
+                        {{end}}
+
+                        <p style="margin:0 0 20px 0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:16px; line-height:24px; color:#333333;">
+                            {{.E.Intro}}</p>
+
+                        <!-- Bulletproof button -->
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td align="center" bgcolor="#007BFF" style="background-color:#007BFF; border-radius:5px;">
+                                    <a href="{{.Link}}" target="_blank"
+                                       style="display:inline-block; padding:12px 24px; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:16px; line-height:20px; font-weight:bold; color:#FFFFFF; text-decoration:none; border-radius:5px; background-color:#007BFF; mso-padding-alt:0; text-underline-color:#007BFF;">{{raw `<!--[if mso]><i style="mso-font-width:150%; mso-text-raise:24pt;" hidden>&emsp;</i><span style="mso-text-raise:12pt;"><![endif]-->`}}{{.E.Button}}{{raw `<!--[if mso]></span><i style="mso-font-width:150%;" hidden>&emsp;&#8203;</i><![endif]-->`}}</a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Plain-link fallback -->
+                        <p style="margin:20px 0 0 0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:13px; line-height:20px; color:#555555;">
+                            {{.E.FallbackLabel}}<br>
+                            <a href="{{.Link}}" target="_blank" dir="ltr" style="color:#007BFF; text-decoration:underline; word-break:break-all;">{{.Link}}</a></p>
+
+                        <p style="margin:20px 0 8px 0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#333333;">
+                            {{.E.Expiry}}</p>
+
+                        <p style="margin:0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:14px; line-height:21px; color:#333333;">
+                            {{.E.Disclaimer}}</p>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="padding:16px 16px 0 16px;">
+                        <p style="margin:0 0 4px 0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#888888;">
+                            {{.T.Footer.Question}}
+                            <a href="https://raven.co.com/kb" target="_blank" style="color:#007BFF; text-decoration:none;">{{.T.Footer.KBLink}}</a></p>
+                        <p style="margin:0; font-family:'Red Hat Display', Arial, Helvetica, sans-serif; font-size:13px; line-height:19px; color:#888888;">
+                            &copy; {{.Year}} Raven Belgium. {{.T.Footer.Rights}}</p>
+                    </td>
+                </tr>
+
+            </table>
+
+            {{raw `<!--[if mso]></td></tr></table><![endif]-->`}}
+
+        </td>
+    </tr>
+</table>
+</body>
+
+</html>

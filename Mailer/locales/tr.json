@@ -1,0 +1,33 @@
+{
+  "meta": { "dir": "ltr" },
+
+  "account_verification": {
+    "subject": "Hesabınızı doğrulayın",
+    "preheader": "Raven hesabınızın kurulumunu tamamlamak için e-posta adresinizi onaylayın.",
+    "heading": "Lütfen e-posta adresinizi doğrulayın",
+    "greeting": "Merhaba %s,",
+    "intro": "Raven'a kaydolduğunuz için teşekkür ederiz. Kaydınızı tamamlamak için lütfen aşağıdaki düğmeyi kullanarak e-posta adresinizi onaylayın.",
+    "button": "E-postayı doğrula",
+    "fallback_label": "Düğme çalışmıyor mu? Bu bağlantıyı kopyalayıp tarayıcınıza yapıştırın:",
+    "expiry": "Bu bağlantının süresi 24 saat sonra dolacak.",
+    "disclaimer": "Bu e-postayı, birisi bu adresle Raven'a kaydolduğu için alıyorsunuz. Bu siz değilseniz, bu e-postayı güvenle yok sayabilirsiniz. Doğrulanmamış kayıt 7 gün sonra silinecektir."
+  },
+
+  "password_reset": {
+    "subject": "Şifrenizi sıfırlayın",
+    "preheader": "Raven şifrenizi sıfırlamak için bu bağlantıyı kullanın.",
+    "heading": "Şifrenizi sıfırlayın",
+    "greeting": "Merhaba %s,",
+    "intro": "Raven hesabınızın şifresini sıfırlamak için bir talep aldık. Yeni bir şifre belirlemek için aşağıdaki düğmeyi kullanın.",
+    "button": "Şifreyi sıfırla",
+    "fallback_label": "Düğme çalışmıyor mu? Bu bağlantıyı kopyalayıp tarayıcınıza yapıştırın:",
+    "expiry": "Bu bağlantının süresi 2,5 saat sonra dolacak.",
+    "disclaimer": "Şifre sıfırlama talebinde bulunmadıysanız bu e-postayı güvenle yok sayabilirsiniz. Şifreniz değişmeyecektir."
+  },
+
+  "footer": {
+    "question": "Bir sorunuz mu var?",
+    "kb_link": "Bilgi Bankamızı ziyaret edin",
+    "rights": "Tüm hakları saklıdır."
+  }
+}

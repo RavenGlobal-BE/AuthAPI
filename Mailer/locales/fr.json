@@ -1,0 +1,33 @@
+{
+  "meta": { "dir": "ltr" },
+
+  "account_verification": {
+    "subject": "Vérifiez votre compte",
+    "preheader": "Confirmez votre adresse e-mail pour finaliser la création de votre compte Raven.",
+    "heading": "Veuillez vérifier votre adresse e-mail",
+    "greeting": "Bonjour %s,",
+    "intro": "Merci de vous être inscrit sur Raven. Pour finaliser votre inscription, veuillez confirmer votre adresse e-mail à l’aide du bouton ci-dessous.",
+    "button": "Vérifier mon adresse e-mail",
+    "fallback_label": "Le bouton ne fonctionne pas ? Copiez et collez ce lien dans votre navigateur :",
+    "expiry": "Ce lien expire dans 24 heures.",
+    "disclaimer": "Vous recevez cet e-mail car quelqu’un s’est inscrit sur Raven avec cette adresse. Si ce n’était pas vous, vous pouvez l’ignorer sans risque. L’inscription non vérifiée sera supprimée après 7 jours."
+  },
+
+  "password_reset": {
+    "subject": "Réinitialisez votre mot de passe",
+    "preheader": "Utilisez ce lien pour réinitialiser votre mot de passe Raven.",
+    "heading": "Réinitialisez votre mot de passe",
+    "greeting": "Bonjour %s,",
+    "intro": "Nous avons reçu une demande de réinitialisation du mot de passe de votre compte Raven. Utilisez le bouton ci-dessous pour en choisir un nouveau.",
+    "button": "Réinitialiser le mot de passe",
+    "fallback_label": "Le bouton ne fonctionne pas ? Copiez et collez ce lien dans votre navigateur :",
+    "expiry": "Ce lien expire dans 2 heures et demie.",
+    "disclaimer": "Si vous n’avez pas demandé de réinitialisation, vous pouvez ignorer cet e-mail sans risque. Votre mot de passe restera inchangé."
+  },
+
+  "footer": {
+    "question": "Une question ?",
+    "kb_link": "Consultez notre base de connaissances",
+    "rights": "Tous droits réservés."
+  }
+}

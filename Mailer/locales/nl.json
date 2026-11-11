@@ -1,0 +1,33 @@
+{
+  "meta": { "dir": "ltr" },
+
+  "account_verification": {
+    "subject": "Verifieer je account",
+    "preheader": "Bevestig je e-mailadres om je Raven-account in te stellen.",
+    "heading": "Bevestig je e-mailadres",
+    "greeting": "Hallo %s,",
+    "intro": "Bedankt voor je registratie bij Raven. Bevestig je e-mailadres met de knop hieronder om je registratie te voltooien.",
+    "button": "E-mailadres bevestigen",
+    "fallback_label": "Werkt de knop niet? Kopieer en plak deze link in je browser:",
+    "expiry": "Deze link verloopt over 24 uur.",
+    "disclaimer": "Je ontvangt deze e-mail omdat iemand zich met dit adres bij Raven heeft aangemeld. Was jij dat niet? Dan kun je deze e-mail gerust negeren. De niet-bevestigde registratie wordt na 7 dagen verwijderd."
+  },
+
+  "password_reset": {
+    "subject": "Stel je wachtwoord opnieuw in",
+    "preheader": "Gebruik deze link om je Raven-wachtwoord opnieuw in te stellen.",
+    "heading": "Stel je wachtwoord opnieuw in",
+    "greeting": "Hallo %s,",
+    "intro": "We hebben een verzoek ontvangen om het wachtwoord van je Raven-account opnieuw in te stellen. Gebruik de knop hieronder om een nieuw wachtwoord te kiezen.",
+    "button": "Wachtwoord opnieuw instellen",
+    "fallback_label": "Werkt de knop niet? Kopieer en plak deze link in je browser:",
+    "expiry": "Deze link verloopt over 2,5 uur.",
+    "disclaimer": "Heb je geen nieuw wachtwoord aangevraagd? Dan kun je deze e-mail gerust negeren. Je wachtwoord blijft ongewijzigd."
+  },
+
+  "footer": {
+    "question": "Heb je een vraag?",
+    "kb_link": "Bekijk onze kennisbank",
+    "rights": "Alle rechten voorbehouden."
+  }
+}
