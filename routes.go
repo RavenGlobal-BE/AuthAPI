@@ -492,6 +492,12 @@ func (a *App) register(c *gin.Context) {
 		return
 	}
 
+	isValid := mailer.EmailIsValid(req.Email)
+
+	if !isValid {
+		c.JSON(400, gin.H{"error": "Invalid email"})
+	}
+
 	hashedPass, err := auth.HashPassword(req.Password)
 
 	err = a.ur.RegisterAccount(req.Email, hashedPass, req.FirstName, req.LastName, req.CountryCode, req.Username)
@@ -511,7 +517,12 @@ func (a *App) register(c *gin.Context) {
 	logger.Log("Key inserted: "+key, logger.Debug)
 
 	logger.Log(fmt.Sprintf("%s/%s/verify?code=%s\n", os.Getenv("FRONTEND_URL"), req.Language, key), logger.Debug)
-	a.mailService.AccountVerificationEmail(req.Email, req.FirstName, key, req.Language)
+
+	mailError := a.mailService.AccountVerificationEmail(req.Email, req.FirstName, key, req.Language)
+	if mailError != nil {
+		c.JSON(500, gin.H{"error": "Internal server error"})
+	}
+
 	c.JSON(200, gin.H{"message": "Registered successfully."})
 }
 
