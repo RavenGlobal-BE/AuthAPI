@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// Tests an email for basic validity
+// EmailIsValid Tests an email for basic validity
 func EmailIsValid(email string) bool {
 	if email == "" {
 		return false
@@ -14,7 +14,12 @@ func EmailIsValid(email string) bool {
 
 	email = strings.TrimSpace(email)
 	addr, err := mail.ParseAddress(email)
-	match, _ := regexp.MatchString("[a-z]", addr.Address)
+
+	if addr == nil {
+		return false
+	}
+
+	match, err := regexp.MatchString("[a-z]", addr.Address)
 
 	if err != nil || !match || addr.Address != email {
 		return false

@@ -496,6 +496,7 @@ func (a *App) register(c *gin.Context) {
 
 	if !isValid {
 		c.JSON(400, gin.H{"error": "Invalid email"})
+		return
 	}
 
 	hashedPass, err := auth.HashPassword(req.Password)
