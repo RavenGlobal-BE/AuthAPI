@@ -963,7 +963,7 @@ func (a *App) devices(c *gin.Context) {
 		return
 	}
 
-	devices, err := a.userRedis.GetDevices(context.Background(), userID.(int))
+	devices, err := a.userRedis.GetDevices(context.Background(), userID.(int64))
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return

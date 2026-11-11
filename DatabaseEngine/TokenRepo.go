@@ -307,23 +307,29 @@ func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) 
 	return data, nil
 }
 
-func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]map[string]string, error) {
-	setKey := "user:sessions:v2:" + strconv.Itoa(userID)
+func (tr *TokenRepo) GetDevices(ctx context.Context, userID int64) ([]map[string]string, error) {
+	parsedID := strconv.FormatInt(userID, 10)
+
+	setKey := "user:sessions:v2:" + parsedID
 	sessionIDs, err := tr.redis.client.ZRange(ctx, setKey, 0, -1).Result() //Shows all of them
 	if err != nil {
 		return nil, err
 	}
 
+	pipe := tr.redis.client.Pipeline()
+	cmds := make([]*redis.MapStringStringCmd, len(sessionIDs))
+	for i, sessionID := range sessionIDs {
+		cmds[i] = pipe.HGetAll(ctx, "session:"+parsedID+":"+sessionID)
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		return nil, err
+	}
+
 	var devices []map[string]string
-	for _, sessionID := range sessionIDs {
-		sessionKey := "session:" + strconv.Itoa(userID) + ":" + sessionID
-
-		sessionData, err := tr.redis.client.HGetAll(ctx, sessionKey).Result()
-		if err != nil {
-			return nil, err
+	for _, cmd := range cmds {
+		if data := cmd.Val(); len(data) > 0 {
+			devices = append(devices, data)
 		}
-
-		devices = append(devices, sessionData)
 	}
 
 	return devices, nil
