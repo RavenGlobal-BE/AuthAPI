@@ -309,7 +309,7 @@ func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) 
 
 func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]map[string]string, error) {
 	setKey := "user:sessions:v2:" + strconv.Itoa(userID)
-	sessionIDs, err := tr.redis.client.SMembers(ctx, setKey).Result()
+	sessionIDs, err := tr.redis.client.ZRange(ctx, setKey, 0, -1).Result() //Shows all of them
 	if err != nil {
 		return nil, err
 	}

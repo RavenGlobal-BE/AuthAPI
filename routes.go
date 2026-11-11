@@ -468,13 +468,15 @@ func (a *App) refresh(c *gin.Context) {
 						logger.Log("[POST /refresh] "+err.Error(), logger.Error)
 					}
 				}
+
+				if err == nil {
+					rotatedSession = true
+				}
 			}
 		}
 
-		rotatedSession = true
 	} else {
-		sessionKey := fmt.Sprintf("session:%d:%s", parsedID, claims.SessionID)
-		_ = a.userRedis.ExtendSession(context.Background(), parsedID, sessionKey, 14*24*time.Hour)
+		_ = a.userRedis.ExtendSession(context.Background(), parsedID, claims.SessionID, 14*24*time.Hour)
 	}
 
 	if rotatedSession {

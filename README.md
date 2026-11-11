@@ -20,6 +20,7 @@ This implementation also is backwards compatible with older Raven Auth versions 
 - An active Postgres & a Redis instance
 - 256MB of RAM available to be used
 - A single GPU should suffice
+- Redis 7.0 or later is required.
 
 ## .env configuration
 ```env
