@@ -156,3 +156,10 @@ func displayConfigs() {
 	logging.Log(fmt.Sprintf("Mail Password: %s", os.Getenv("MailPassword")), logging.Debug)
 	logging.Log(fmt.Sprintf("Mail Server: %s", os.Getenv("MailServer")), logging.Debug)
 }
+
+func initialize(app *App) {
+	err := app.mailService.LoadAllLocales()
+	if err != nil {
+		logging.Log(err.Error(), logging.Fatal)
+	}
+}

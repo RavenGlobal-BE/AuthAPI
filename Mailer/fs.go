@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json/v2"
+	"fmt"
 	"html/template"
+	"strings"
 )
 
 //go:embed templates/*.html
@@ -13,22 +15,40 @@ var tmplFS embed.FS
 //go:embed locales/*.json
 var localeFS embed.FS
 
-var langs = make(map[string]*Locale)
+var langs = map[string]Locale{}
+
+func (ms *MailService) LoadAllLocales() error {
+	dirs, err := localeFS.ReadDir("locales")
+	if err != nil {
+		return err
+	}
+
+	for _, f := range dirs {
+		if f.IsDir() || !strings.HasSuffix(f.Name(), ".json") {
+			continue
+		}
+
+		data, err := localeFS.ReadFile("locales/" + f.Name())
+		if err != nil {
+			return err // error reading the file
+		}
+
+		var loc Locale
+		if err := json.Unmarshal(data, &loc); err != nil {
+			return fmt.Errorf("locale %s: %w", f.Name(), err)
+		}
+
+		langs[strings.TrimSuffix(f.Name(), ".json")] = loc
+	}
+	return nil
+}
 
 func loadLocale(lang string) (Locale, error) {
-	if langs[lang] != nil {
-		return *langs[lang], nil
+	loc, ok := langs[lang]
+	if !ok {
+		return Locale{}, fmt.Errorf("unsupported language %q", lang)
 	}
-
-	var loc Locale
-	data, err := localeFS.ReadFile("locales/" + lang + ".json")
-	if err != nil {
-		return loc, err // no such language
-	}
-	err = json.Unmarshal(data, &loc)
-
-	langs[lang] = &loc //Saves it in a dictionary for faster pulling
-	return loc, err
+	return loc, nil
 }
 
 func renderPage(name string, data any) (string, error) {
