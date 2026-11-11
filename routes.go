@@ -639,6 +639,17 @@ func (a *App) resetPassword(c *gin.Context) {
 		return
 	}
 
+	user := a.ur.GetAccountByEmail(data["email"])
+	if user == nil {
+		c.JSON(404, gin.H{"error": "User not found"})
+		return
+	}
+
+	err = a.userRedis.RevokeAllSessions(context.Background(), user.UserID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Internal server error"})
+	}
+
 	hashedPass, err := auth.HashPassword(req.Password)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})

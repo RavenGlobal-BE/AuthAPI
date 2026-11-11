@@ -170,6 +170,25 @@ func (tr *TokenRepo) DeleteSession(ctx context.Context, userID int64, sessionID 
 	return err
 }
 
+func (tr *TokenRepo) RevokeAllSessions(ctx context.Context, userID int64) error {
+	uid := strconv.FormatInt(userID, 10)
+	setKey := "user:sessions:v2:" + uid
+
+	sessionIDs, err := tr.redis.client.ZRange(ctx, setKey, 0, -1).Result()
+	if err != nil {
+		return err
+	}
+
+	pipe := tr.redis.client.TxPipeline()
+	for _, sessionID := range sessionIDs {
+		pipe.Del(ctx, "session:"+uid+":"+sessionID)
+	}
+	pipe.Del(ctx, setKey)
+
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
 // DeleteToken Deletes a refresh token from Redis (used during rotation).
 func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
 	tr.redis.client.Del(ctx, refreshToken)
