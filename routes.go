@@ -104,7 +104,7 @@ func (a *App) handleLogin(c *gin.Context) {
 
 	//Backwards compatibility layer for users who are still on the old bcrypt system.
 	if strings.HasPrefix(user.Password, "$2b$") || strings.HasPrefix(user.Password, "$2a$") || strings.HasPrefix(user.Password, "$2y$") {
-		newHash, err := auth.HashPassword(loginData.Password)
+		newHash, err := auth.HashPassword(c.Request.Context(), loginData.Password)
 		err = a.ur.ResetPassword(user.Email, newHash)
 
 		if err != nil {
@@ -509,7 +509,7 @@ func (a *App) register(c *gin.Context) {
 		return
 	}
 
-	hashedPass, err := auth.HashPassword(req.Password)
+	hashedPass, err := auth.HashPassword(c.Request.Context(), req.Password)
 
 	err = a.ur.RegisterAccount(req.Email, hashedPass, req.FirstName, req.LastName, req.CountryCode, req.Username)
 	if err != nil {
@@ -518,7 +518,7 @@ func (a *App) register(c *gin.Context) {
 		return
 	}
 
-	key, err := a.userRedis.SignUpInsert(context.Background(), req.Email)
+	key, err := a.userRedis.SignUpInsert(c.Request.Context(), req.Email)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(500, gin.H{"error": "Server error"})
@@ -650,7 +650,7 @@ func (a *App) resetPassword(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Internal server error"})
 	}
 
-	hashedPass, err := auth.HashPassword(req.Password)
+	hashedPass, err := auth.HashPassword(c.Request.Context(), req.Password)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Server error"})
 		return

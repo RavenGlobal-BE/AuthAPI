@@ -1,19 +1,25 @@
 package authorization
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var argonSlots = make(chan struct{}, runtime.NumCPU()) // 4
 
 // Optimized for our OVH Container.
 // Specs: 8 vCPU, 24GB of RAM -> Unlike bcrypt, argon2 is memory hungry.
@@ -25,7 +31,27 @@ const (
 	argonSaltLen = 16
 )
 
-func HashPassword(password string) (string, error) {
+func acquire(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	select {
+	case argonSlots <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return errors.New("hashing busy")
+	}
+}
+
+func release() { <-argonSlots }
+
+func HashPassword(ctx context.Context, password string) (string, error) {
+	err := acquire(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	defer release()
+
 	salt := make([]byte, argonSaltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return "", err
