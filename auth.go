@@ -91,6 +91,7 @@ func main() {
 		cr:          clientsRepo,
 	}
 
+	initialize(app)
 	RegisterRoutes(r, app)
 
 	port, err := strconv.Atoi(os.Getenv("PORT"))
@@ -162,4 +163,10 @@ func initialize(app *App) {
 	if err != nil {
 		logging.Log(err.Error(), logging.Fatal)
 	}
+
+	err = app.mailService.LoadAllTemplates()
+	if err != nil {
+		logging.Log(err.Error(), logging.Fatal)
+	}
+
 }

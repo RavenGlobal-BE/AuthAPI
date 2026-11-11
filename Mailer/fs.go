@@ -16,6 +16,30 @@ var tmplFS embed.FS
 var localeFS embed.FS
 
 var langs = map[string]Locale{}
+var templates = map[string]*template.Template{}
+
+func loadLocale(lang string) (Locale, error) {
+	loc, ok := langs[lang]
+	if !ok {
+		return Locale{}, fmt.Errorf("unsupported language %q", lang)
+	}
+	return loc, nil
+}
+
+func renderPage(name string, data any) (string, error) {
+	t, ok := templates[name]
+	if !ok {
+		return "", fmt.Errorf("unsupported template %q", name)
+	}
+
+	var buf bytes.Buffer
+
+	// Compares the data of the email against the name of the object and replaces them with the correct value
+	if err := t.Execute(&buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
 
 func (ms *MailService) LoadAllLocales() error {
 	dirs, err := localeFS.ReadDir("locales")
@@ -42,27 +66,25 @@ func (ms *MailService) LoadAllLocales() error {
 	}
 	return nil
 }
-
-func loadLocale(lang string) (Locale, error) {
-	loc, ok := langs[lang]
-	if !ok {
-		return Locale{}, fmt.Errorf("unsupported language %q", lang)
-	}
-	return loc, nil
-}
-
-func renderPage(name string, data any) (string, error) {
-	t, err := template.New(name+".html").Funcs(funcs).ParseFS(tmplFS, "templates/"+name+".html")
+func (ms *MailService) LoadAllTemplates() error {
+	dirs, err := tmplFS.ReadDir("templates")
 	if err != nil {
-		return "", err
+		return err
 	}
-	var buf bytes.Buffer
 
-	// Compares the data of the email against the name of the object and replaces them with the correct value
-	if err := t.Execute(&buf, data); err != nil {
-		return "", err
+	for _, f := range dirs {
+		if f.IsDir() || !strings.HasSuffix(f.Name(), ".html") {
+			continue
+		}
+
+		t, err := template.New(f.Name()).Funcs(funcs).ParseFS(tmplFS, "templates/"+f.Name())
+		if err != nil {
+			return fmt.Errorf("template %s: %w", f.Name(), err)
+		}
+
+		templates[strings.TrimSuffix(f.Name(), ".html")] = t
 	}
-	return buf.String(), nil
+	return nil
 }
 
 // EmailText contains a set of default values that will be shown in an email. This is the universal struct.
