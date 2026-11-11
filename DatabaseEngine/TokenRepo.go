@@ -48,7 +48,7 @@ func (tr *TokenRepo) InsertToken(ctx context.Context, key string, structure map[
 	return true
 }
 
-// Blacklists the refresh token
+// BlacklistToken Blacklists the refresh token
 func (tr *TokenRepo) BlacklistToken(ctx context.Context, key string) bool {
 	hash := sha256.New()
 	hash.Write([]byte(key))
@@ -95,28 +95,6 @@ func (tr *TokenRepo) GetSessionByID(ctx context.Context, sessionID string) (map[
 	return result, nil
 }
 
-// InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
-func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID int64, data map[string]interface{}, ttl time.Duration) error {
-	uid := strconv.FormatInt(userID, 10)
-	sessionKey := "session:" + uid + ":" + sessionID
-	setKey := "user:sessions:v2:" + uid
-	now := time.Now()
-
-	pipe := tr.redis.client.TxPipeline()
-	pipe.HSet(ctx, sessionKey, data)
-	pipe.Expire(ctx, sessionKey, ttl)
-	pipe.ZAdd(ctx, setKey, redis.Z{Score: float64(now.Add(ttl).Unix()), Member: sessionID})
-	pipe.ZRemRangeByScore(ctx, setKey, "-inf", strconv.FormatInt(now.Unix(), 10)) // drop expired IDs
-	pipe.Expire(ctx, setKey, ttl)
-	_, err := pipe.Exec(ctx)
-	return err
-}
-
-// Removes all sessions from a given user
-func (tr *TokenRepo) BlacklistAll(ctx context.Context, userID int64, sidExcemption string) {
-
-}
-
 func (tr *TokenRepo) CreateSessionData(userID int64, clientID, deviceModel, deviceName, language string, blacklisted bool, location map[string]interface{}) map[string]interface{} {
 	return map[string]interface{}{
 		// Required Info
@@ -136,24 +114,68 @@ func (tr *TokenRepo) CreateSessionData(userID int64, clientID, deviceModel, devi
 	}
 }
 
-func (tr *TokenRepo) ExtendSession(ctx context.Context, userID int64, sessionID string) error {
-	UID := strconv.FormatInt(userID, 10)
+// InsertSession stores a session using the sessionID directly as the Redis key (no hashing).
+func (tr *TokenRepo) InsertSession(ctx context.Context, sessionID string, userID int64, data map[string]interface{}, ttl time.Duration) error {
+	uid := strconv.FormatInt(userID, 10)
+	sessionKey := "session:" + uid + ":" + sessionID
+	setKey := "user:sessions:v2:" + uid
+	now := time.Now()
+
+	pipe := tr.redis.client.TxPipeline()
+	pipe.HSet(ctx, sessionKey, data)
+	pipe.Expire(ctx, sessionKey, ttl)
+	pipe.ZAdd(ctx, setKey, redis.Z{Score: float64(now.Add(ttl).Unix()), Member: sessionID})
+	pipe.ZRemRangeByScore(ctx, setKey, "-inf", strconv.FormatInt(now.Unix(), 10)) // drop expired IDs
+	pipe.ExpireNX(ctx, setKey, ttl)                                               // Sets a key if the user has none
+	pipe.ExpireGT(ctx, setKey, ttl)                                               // .Otherwise, only lengthen it
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (tr *TokenRepo) ExtendSession(ctx context.Context, userID int64, sessionID string, ttl time.Duration) error {
+	uid := strconv.FormatInt(userID, 10)
+	sessionKey := "session:" + uid + ":" + sessionID
+	setKey := "user:sessions:v2:" + uid
+	now := time.Now()
+
+	pipe := tr.redis.client.TxPipeline()
+	pipe.ZRemRangeByScore(ctx, setKey, "-inf", strconv.FormatInt(now.Unix(), 10))
+	expCmd := pipe.Expire(ctx, sessionKey, ttl)
+
+	pipe.ZAddXX(ctx, setKey, redis.Z{Score: float64(now.Add(ttl).Unix()), Member: sessionID})
+	pipe.ExpireGT(ctx, setKey, ttl) // only ever lengthens the set's TTL
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		return err
+	}
+
+	if !expCmd.Val() {
+		return errors.New("session not found")
+	}
+	return nil
+}
+
+func (tr *TokenRepo) DeleteSession(ctx context.Context, userID int64, sessionID string) error {
+	uid := strconv.FormatInt(userID, 10)
+	sessionKey := "session:" + uid + ":" + sessionID
+	setKey := "user:sessions:v2:" + uid
 
 	pipe := tr.redis.client.TxPipeline()
 
-	pipe.Expire(ctx, sessionID, 14*24*time.Hour)
-	pipe.Expire(ctx, "user:sessions:"+UID, 14*24*time.Hour)
+	pipe.Del(ctx, sessionKey)
+	pipe.ZRem(ctx, setKey, sessionID)
+	pipe.ZRemRangeByScore(ctx, setKey, "-inf", strconv.FormatInt(time.Now().Unix(), 10))
 
 	_, err := pipe.Exec(ctx)
 	return err
 }
 
-// Deletes a refresh token from Redis (used during rotation).
+// DeleteToken Deletes a refresh token from Redis (used during rotation).
 func (tr *TokenRepo) DeleteToken(ctx context.Context, refreshToken string) {
 	tr.redis.client.Del(ctx, refreshToken)
 }
 
-// Stores an auth code in Redis with a 60s TTL.
+// InsertAuthCode Stores an auth code in Redis with a 60s TTL.
 func (tr *TokenRepo) InsertAuthCode(ctx context.Context, code string, data map[string]interface{}) error {
 	key := "auth_code:" + code
 
@@ -164,7 +186,7 @@ func (tr *TokenRepo) InsertAuthCode(ctx context.Context, code string, data map[s
 	return tr.redis.client.Expire(ctx, key, 60*time.Second).Err()
 }
 
-// Reads and immediately deletes an auth code from Redis (single-use).
+// GetAuthCode Reads and immediately deletes an auth code from Redis (single-use).
 // Returns an error if the code doesn't exist or has already expired.
 func (tr *TokenRepo) GetAuthCode(ctx context.Context, code string) (map[string]string, error) {
 	key := "auth_code:" + code
@@ -183,12 +205,12 @@ func (tr *TokenRepo) GetAuthCode(ctx context.Context, code string) (map[string]s
 	return result, nil
 }
 
-// Adds a token's jti to the revocation blocklist (access token).
+// RevokeToken Adds a token's jti to the revocation blocklist (access token).
 func (tr *TokenRepo) RevokeToken(ctx context.Context, jti string, ttl time.Duration) error {
 	return tr.redis.client.Set(ctx, "revoked:"+jti, "1", ttl).Err()
 }
 
-// Returns true if the token's jti has been revoked.
+// IsRevoked Returns true if the token's jti has been revoked.
 func (tr *TokenRepo) IsRevoked(ctx context.Context, jti string) bool {
 	result, _ := tr.redis.client.Exists(ctx, "revoked:"+jti).Result()
 	return result > 0
@@ -206,7 +228,7 @@ func createToken() string {
 	return hex.EncodeToString(hash[:])
 }
 
-// Based on authorization.go GenerateToken since i can't import it due to an "import cycle" error, i have to do it this way.
+// SignUpInsert Based on authorization.go GenerateToken since i can't import it due to an "import cycle" error, i have to do it this way.
 func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, error) {
 	token := createToken()
 	key := "signup:" + token
@@ -226,7 +248,7 @@ func (tr *TokenRepo) SignUpInsert(ctx context.Context, email string) (string, er
 	return token, nil
 }
 
-// Inserts a reset token into Redis when the user resets their password
+// ResetInsert Inserts a reset token into Redis when the user resets their password
 func (tr *TokenRepo) ResetInsert(ctx context.Context, email string) (string, error) {
 	token := createToken()
 	key := "reset:" + token
@@ -247,7 +269,7 @@ func (tr *TokenRepo) ResetInsert(ctx context.Context, email string) (string, err
 	return token, nil
 }
 
-// Verifies whether the user clicked on is a legit one
+// VerifyReset Verifies whether the user clicked on is a legit one
 func (tr *TokenRepo) VerifyReset(ctx context.Context, verificationlink string) (map[string]string, error) {
 	key := "reset:" + verificationlink
 
@@ -286,7 +308,7 @@ func (tr *TokenRepo) VerifySignup(ctx context.Context, verificationlink string) 
 }
 
 func (tr *TokenRepo) GetDevices(ctx context.Context, userID int) ([]map[string]string, error) {
-	setKey := "user:sessions:" + strconv.Itoa(userID)
+	setKey := "user:sessions:v2:" + strconv.Itoa(userID)
 	sessionIDs, err := tr.redis.client.SMembers(ctx, setKey).Result()
 	if err != nil {
 		return nil, err

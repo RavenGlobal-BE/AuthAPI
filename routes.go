@@ -440,6 +440,8 @@ func (a *App) refresh(c *gin.Context) {
 
 	response := gin.H{"access_token": newAccessToken, "token_type": "Bearer", "expires_in": 900}
 
+	var rotatedSession bool = false
+
 	// Sliding window: rotate refresh token only when < 2 days remain
 	if time.Until(claims.ExpiresAt.Time) < 2*24*time.Hour {
 		newSidPtr, newSidErr := auth.GenerateToken()
@@ -468,9 +470,15 @@ func (a *App) refresh(c *gin.Context) {
 				}
 			}
 		}
+
+		rotatedSession = true
 	} else {
 		sessionKey := fmt.Sprintf("session:%d:%s", parsedID, claims.SessionID)
-		_ = a.userRedis.ExtendSession(context.Background(), parsedID, sessionKey)
+		_ = a.userRedis.ExtendSession(context.Background(), parsedID, sessionKey, 14*24*time.Hour)
+	}
+
+	if rotatedSession {
+		_ = a.userRedis.DeleteSession(context.Background(), parsedID, claims.SessionID)
 	}
 
 	c.JSON(200, response)
@@ -549,7 +557,19 @@ func (a *App) logout(c *gin.Context) {
 		return
 	}
 
+	parsedID, parseErr := strconv.ParseInt(claims.Subject, 10, 64)
+	if parseErr != nil {
+		c.JSON(500, gin.H{"error": "Server error"})
+		return
+	}
+
 	a.userRedis.DeleteToken(context.Background(), claims.SessionID)
+	err = a.userRedis.DeleteSession(context.Background(), parsedID, claims.SessionID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	c.JSON(200, gin.H{"message": "Logged out successfully"})
 }
 
