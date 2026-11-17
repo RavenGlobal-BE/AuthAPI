@@ -3,8 +3,8 @@ package Config
 /* This config file includes are changeable settings. They're gonna be hardcoded on compile-time. */
 
 // Version & Build
-var Version = "26.3.1"
-var Build float32 = 38
+var Version = "26.3.2"
+var Build float32 = 39
 
 // Raven ONE configurations
 var CdnEndpoint string = "https://cdn.raven.co.com/orgIcons/"
