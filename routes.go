@@ -491,6 +491,7 @@ func (a *App) register(c *gin.Context) {
 		Email       string `json:"email"`
 		Password    string `json:"password"`
 		FirstName   string `json:"first_name"`
+		MiddleName  string `json:"middle_name"`
 		LastName    string `json:"last_name"`
 		Username    string `json:"username"`
 		CountryCode string `json:"country_code"`
@@ -511,7 +512,7 @@ func (a *App) register(c *gin.Context) {
 
 	hashedPass, err := auth.HashPassword(c.Request.Context(), req.Password)
 
-	err = a.ur.RegisterAccount(req.Email, hashedPass, req.FirstName, req.LastName, req.CountryCode, req.Username)
+	err = a.ur.RegisterAccount(req.Email, hashedPass, req.FirstName, req.LastName, req.CountryCode, req.Username, req.MiddleName)
 	if err != nil {
 		fmt.Println(err)
 		c.JSON(500, gin.H{"error": "Server error"})

@@ -91,7 +91,7 @@ func optionalString(optionalString string) *string {
 }
 
 // RegisterAccount Puts all your details into the database
-func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
+func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username, middleName string) error {
 	if email == "" || countryCode == "" || firstName == "" || password == "" {
 		return errors.New("Invalid request")
 	}
@@ -104,9 +104,9 @@ func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, count
 	userid := node.Generate().Int64()
 
 	_, err = Ur.db.pool.Exec(context.Background(), `
-		INSERT INTO accounts.users (user_id, email, password, first_name, last_name, "publicusername", "countrycode")
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, userid, email, password, firstName, optionalString(lastName), optionalString(username), countryCode)
+		INSERT INTO accounts.users (user_id, email, password, first_name, last_name, "publicusername", "countrycode", middle_name)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, userid, email, password, firstName, optionalString(lastName), optionalString(username), optionalString(middleName))
 
 	if err != nil {
 		return err
