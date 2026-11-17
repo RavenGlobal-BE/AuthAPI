@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/snowflake"
+	"github.com/jackc/pgx/v5"
 )
 
 type Usersrepo struct {
@@ -81,9 +82,17 @@ func snowflakeFromTime(t time.Time, nodeID int64, seq int64) int64 {
 	return (ms << 22) | (nodeID << 12) | seq
 }
 
-// Puts all your details into the database
+func optionalString(optionalString string) *string {
+	if optionalString == "" {
+		return nil
+	}
+
+	return &optionalString
+}
+
+// RegisterAccount Puts all your details into the database
 func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, countryCode, username string) error {
-	if email == "" || username == "" || countryCode == "" || firstName == "" || lastName == "" || password == "" {
+	if email == "" || countryCode == "" || firstName == "" || password == "" {
 		return errors.New("Invalid request")
 	}
 	snowflake.Epoch = 1748736000000
@@ -97,7 +106,7 @@ func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, count
 	_, err = Ur.db.pool.Exec(context.Background(), `
 		INSERT INTO accounts.users (user_id, email, password, first_name, last_name, "publicusername", "countrycode")
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, userid, email, password, firstName, lastName, username, countryCode)
+	`, userid, email, password, firstName, optionalString(lastName), optionalString(username), countryCode)
 
 	if err != nil {
 		return err
@@ -276,18 +285,40 @@ func (Ur *Usersrepo) UpdateUserSettings(ctx context.Context, args []any, clauses
 	return nil
 }
 
-func (Ur *Usersrepo) UpdatePhoto(ctx context.Context, newFileName string, userID int64) error {
-	if _, err := Ur.db.pool.Exec(ctx, `UPDATE accounts.users SET profilepicture = $1 WHERE user_id = $2`, newFileName, userID); err != nil {
-		return err
-	}
+var ErrUserNotFound = errors.New("user not found")
 
-	return nil
+// UpdatePhoto sets the new picture and returns the previous one (nil if there was none).
+func (Ur *Usersrepo) UpdatePhoto(ctx context.Context, newFileName string, userID int64) (*string, error) {
+	var old *string
+	err := Ur.db.pool.QueryRow(ctx, `
+		UPDATE accounts.users u
+		SET profilepicture = $1
+		FROM (SELECT user_id, profilepicture
+		      FROM accounts.users
+		      WHERE user_id = $2
+		      FOR UPDATE) prev
+		WHERE u.user_id = prev.user_id
+		RETURNING prev.profilepicture`, newFileName, userID).Scan(&old)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+	return old, err
 }
 
-func (Ur *Usersrepo) RemovePhoto(ctx context.Context, userID int64) error {
-	if _, err := Ur.db.pool.Exec(ctx, `UPDATE accounts.users SET profilepicture = NULL WHERE user_id = $1`, userID); err != nil {
-		return err
+// RemovePhoto clears the picture and returns the previous one (nil if there was none).
+func (Ur *Usersrepo) RemovePhoto(ctx context.Context, userID int64) (*string, error) {
+	var old *string
+	err := Ur.db.pool.QueryRow(ctx, `
+		UPDATE accounts.users u
+		SET profilepicture = NULL
+		FROM (SELECT user_id, profilepicture
+		      FROM accounts.users
+		      WHERE user_id = $1
+		      FOR UPDATE) prev
+		WHERE u.user_id = prev.user_id
+		RETURNING prev.profilepicture`, userID).Scan(&old)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
 	}
-
-	return nil
+	return old, err
 }

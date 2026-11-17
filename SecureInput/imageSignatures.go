@@ -90,7 +90,7 @@ func RemoveImageFromCDN(ctx context.Context, fileName string) error {
 
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return errors.New("image deletion failed")
+		return errors.New("Image deletion failed")
 	}
 	return nil
 }
