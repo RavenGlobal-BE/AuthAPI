@@ -1,5 +1,5 @@
 # Stage 1: The Builder (Heavy, has all the Go tools)
-FROM golang:1.27.3-alpine3.24 AS builder
+FROM golang:1.27.4-alpine3.24 AS builder
 WORKDIR /app
 
 # Cache dependencies first (makes future Blacksmith builds significantly faster)
@@ -13,7 +13,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-X main.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o auth .
 
 # Stage 2: The Runner (Tiny, secure, no source code)
-FROM alpine:latest
+FROM alpine:3.24.4
 WORKDIR /root/
 
 # Copy ONLY the compiled 'auth' binary from Stage 1

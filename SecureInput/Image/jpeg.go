@@ -5,17 +5,6 @@ import (
 	"encoding/binary"
 )
 
-// JPEG strips metadata from a JPEG.
-//
-// It works on an allow-list: only segments needed to render the Image are kept
-// (JFIF/APP0, ICC colour profile/APP2, Adobe/APP14, and all non-APP segments
-// such as tables, frame headers and scan data). Everything else is dropped,
-// including EXIF and XMP (APP1), IPTC (APP13), comments, MPF, and anything
-// appended after the end-of-Image marker (e.g. iPhone gain maps, which carry
-// their own EXIF, or data smuggled after the Image).
-//
-// The EXIF orientation is re-inserted as a tiny EXIF block containing only that
-// tag, so phone photos are not shown sideways.
 func JPEG(data []byte) ([]byte, error) {
 	if len(data) < 4 || data[0] != 0xFF || data[1] != 0xD8 {
 		return nil, ErrNotJPEG
