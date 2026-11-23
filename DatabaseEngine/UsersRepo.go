@@ -24,7 +24,7 @@ func NewUsersRepo(db *DB) *Usersrepo {
 // It queries the users database based on the
 func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, middle_name, last_name, publicusername, countrycode, is_verified, profilepicture from accounts.users where email = $1`, mail)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, middle_name, last_name, publicusername, countrycode, is_verified, profilepicture FROM accounts.users WHERE email = $1 AND is_deleted = 0`, mail)
 	err := row.Scan(
 		&v.UserID,
 		&v.Email,
@@ -48,7 +48,7 @@ func (Ur *Usersrepo) GetAccountByEmail(mail string) *UserAuth {
 // It queries the users database based on the UserID
 func (Ur *Usersrepo) GetAccountById(id int64) *UserAuth {
 	var v = &UserAuth{} //creates an empty struct
-	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, middle_name, last_name, publicusername, countrycode, is_verified, profilepicture from accounts.users where user_id = $1`, id)
+	row := Ur.db.pool.QueryRow(context.Background(), `select user_id, email, password, first_name, middle_name, last_name, publicusername, countrycode, is_verified, profilepicture FROM accounts.users WHERE user_id = $1 AND is_deleted = 0`, id)
 
 	err := row.Scan(
 		&v.UserID,
