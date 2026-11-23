@@ -70,7 +70,7 @@ func (a *App) handleLogin(c *gin.Context) {
 
 	// Checks whether the email actually exists
 	user := a.ur.GetAccountByEmail(loginData.Email)
-	if user == nil || user.IsDeleted == 1 {
+	if user == nil {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
 		return
 	}
@@ -79,7 +79,6 @@ func (a *App) handleLogin(c *gin.Context) {
 		setup = append(setup, "countryCode")
 	}
 
-	// Else...
 	result := auth.CheckPasswordHash(loginData.Password, user.Password)
 	if result == false {
 		c.JSON(401, gin.H{"success": false, "reason": "Invalid credentials"})
@@ -87,7 +86,6 @@ func (a *App) handleLogin(c *gin.Context) {
 	}
 
 	if user.IsVerified == 0 {
-		//SignUpInsert simulates a signup process to send the user their verification email.
 		key, err := a.userRedis.SignUpInsert(context.Background(), user.Email)
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Server error"})
