@@ -619,7 +619,7 @@ func (a *App) userinfo(c *gin.Context) {
 	})
 }
 
-// Resets the user's password. All redis tokens will be removed.,
+// resetPassword Resets the user's password. All redis tokens will be removed.,
 func (a *App) resetPassword(c *gin.Context) {
 	var req struct {
 		Token    string `json:"token"`
@@ -829,22 +829,23 @@ func (a *App) authorize(c *gin.Context) {
 			return
 		}
 
-		// Check Redis: token must exist and not be blacklisted
-		tokenData, redisErr := a.userRedis.GetTokenInfo(context.Background(), refreshCookie)
-		if redisErr != nil || len(tokenData) == 0 || tokenData["blacklisted"] == "1" {
-			if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
-				logger.Log("[POST /authorize] Session blacklisted", logger.Error)
-			}
-			c.SetCookie("access_token", "", -1, "/", "", false, true)
-			c.SetCookie("refresh_token", "", -1, "/", "", false, true)
-			c.Redirect(302, loginURL)
-			return
-		}
-
-		// Re-issue the access token silently
 		parsedID, parseErr := strconv.ParseInt(refreshClaims.Subject, 10, 64)
 		if parseErr != nil {
 			c.JSON(500, gin.H{"error": "Server error"})
+			return
+		}
+
+		exists, err := a.userRedis.SessionExists(c.Request.Context(), parsedID, refreshClaims.SessionID)
+		if err != nil {
+			logger.Log("[GET /authorize] session lookup failed: "+err.Error(), logger.Error)
+			c.JSON(503, gin.H{"error": "Service unavailable"})
+			return
+		}
+
+		if !exists {
+			c.SetCookie("access_token", "", -1, "/", "", false, true)
+			c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+			c.Redirect(302, loginURL)
 			return
 		}
 
@@ -866,7 +867,7 @@ func (a *App) authorize(c *gin.Context) {
 		}
 
 		c.SetCookie("access_token", newAccessToken, 900, "/", "", false, true)
-		userID = tokenData["user_id"]
+		userID = strconv.FormatInt(parsedID, 10)
 	} else {
 		userID = cookieDetails.Subject
 	}
