@@ -113,7 +113,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.GET("/verify", auth.RateLimiting(app.rateLimit), app.verify)
 	router.GET("/requestReset", auth.RateLimiting(app.rateLimit), app.requestReset)
 	router.POST("/reset", auth.RateLimiting(app.rateLimit), app.resetPassword)
-	router.POST("/devices", auth.JWTAuthMiddleware(), app.devices)
+	router.POST("/devices", auth.JWTAuthMiddleware(app.userRedis), app.devices)
 
 	//Token management
 	router.POST("/introspect", app.introspect)
@@ -121,7 +121,7 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	// router.POST("/token", auth.RateLimiting(app.rateLimit), app.token)
 	// router.POST("/refresh", auth.RateLimiting(app.rateLimit), app.refresh)
 	// router.POST("/logout", auth.RateLimiting(app.rateLimit), app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
-	router.POST("/userinfo", auth.JWTAuthMiddleware(), app.userinfo)
+	router.POST("/userinfo", auth.JWTAuthMiddleware(app.userRedis), app.userinfo)
 	router.POST("/token", app.token)
 	router.POST("/refresh", app.refresh)
 	router.POST("/logout", app.logout) //TODO: Use the instead of the self-made implementation JWTAuthMiddleware
@@ -135,10 +135,10 @@ func RegisterRoutes(router *gin.Engine, app *App) {
 	router.GET("/clientInfo", app.clientInfo)
 
 	//Personalization
-	router.POST("/countryCode", auth.JWTAuthMiddleware(), app.setCountryCode)
-	router.PUT("/update", auth.JWTAuthMiddleware(), app.updateProfile)
-	router.POST("/upload/profile", auth.JWTAuthMiddleware(), app.uploadPhoto)
-	router.DELETE("/remove/profile", auth.JWTAuthMiddleware(), app.removePhoto)
+	router.POST("/countryCode", auth.JWTAuthMiddleware(app.userRedis), app.setCountryCode)
+	router.PUT("/update", auth.JWTAuthMiddleware(app.userRedis), app.updateProfile)
+	router.POST("/upload/profile", auth.JWTAuthMiddleware(app.userRedis), app.uploadPhoto)
+	router.DELETE("/remove/profile", auth.JWTAuthMiddleware(app.userRedis), app.removePhoto)
 
 }
 
@@ -184,6 +184,23 @@ func initialize(app *App) {
 	err = app.mailService.LoadAllTemplates()
 	if err != nil {
 		logging.Log(err.Error(), logging.Fatal)
+	}
+
+	if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+		token, _ := auth.GenerateJWTToken(
+			2035872413979250688,                // userID (sub)
+			"imad@raven.co.com",                // email
+			"Imad",                             // firstName
+			"Amroug",                           // lastName
+			"access",                           // access (token_type)
+			time.Unix(1798747095, 0),           // expiration (exp)
+			"b93TD9T5CHPlTtySHEvCp172coeskrtO", // nonce
+			"0965c3377da8cb95b27ba02b04292dbf4640f3d988da7644e79e285f6d1bd11a", // sessionID (sid)
+			"BE",           // country
+			"particle-ios", // audience (aud[0])
+		)
+
+		logging.Log(token, logging.Debug)
 	}
 
 }

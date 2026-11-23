@@ -15,7 +15,7 @@ import (
 
 /* As of v26.2 RC2, cookies are now a valid form of authorization. */
 /* As of v26.3 (Beta 1), token signature verification and expiry checks get skipped depending on the "ENVIRONMENT" in .env. */
-func JWTAuthMiddleware() gin.HandlerFunc {
+func JWTAuthMiddleware(sessions *dbEngine.TokenRepo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		cookie, err := c.Cookie("access_token")
@@ -45,6 +45,17 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		userID, err := strconv.ParseInt(payload.RegisteredClaims.Subject, 10, 64) // Convert userID from string to int
 		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			return
+		}
+
+		exists, err := sessions.SessionExists(c.Request.Context(), userID, payload.SessionID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			return
+		}
+
+		if !exists {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
 		}

@@ -24,6 +24,16 @@ func NewTokenRepo(db *RedisClient) *TokenRepo {
 	return &TokenRepo{redis: db}
 }
 
+func (tr *TokenRepo) SessionExists(ctx context.Context, userID int64, sessionID string) (bool, error) {
+	key := "session:" + strconv.FormatInt(userID, 10) + ":" + sessionID
+
+	n, err := tr.redis.client.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
 // Ping checks Redis connectivity for this repo.
 func (tr *TokenRepo) Ping(ctx context.Context) error {
 	return tr.redis.client.Ping(ctx).Err()

@@ -555,7 +555,7 @@ func (a *App) logout(c *gin.Context) {
 	token := strings.Split(accessToken, "Bearer ")[1]
 
 	claims, err := auth.ValidateToken(token)
-	if err != nil || claims.TokenType != "refresh" {
+	if err != nil || claims.TokenType != "access" {
 		c.JSON(401, gin.H{"error": "Invalid token"})
 		return
 	}
@@ -579,6 +579,8 @@ func (a *App) logout(c *gin.Context) {
 func (a *App) userinfo(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	sessionID, exists := c.Get("session_id")
+
+	logger.Log(fmt.Sprintf("Userinfo for: %s (%s)", userID, sessionID), logger.Debug)
 
 	if exists != true {
 		c.JSON(400, gin.H{"error": "Invalid token"})
