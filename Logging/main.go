@@ -43,7 +43,7 @@ func Log(message string, logType LogType) {
 	fmt.Println(finalizedString)
 
 	if logType == Fatal {
-		os.Exit(9)
+		os.Exit(1)
 	}
 
 }
