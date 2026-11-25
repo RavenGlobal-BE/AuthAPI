@@ -159,6 +159,23 @@ func displayConfigs() {
 }
 
 func initialize(app *App) {
+	if os.Getenv("ENVIRONMENT") == "DEVELOPMENT" {
+		token, _ := auth.GenerateJWTToken(
+			2035872413979250688,                                                // userID (sub)
+			"imad@raven.co.com",                                                // email
+			"Imad",                                                             // firstName
+			"Amroug",                                                           // lastName
+			"access",                                                           // access (token_type)
+			time.Unix(1798747095, 0),                                           // expiration (exp)
+			"b93TD9T5CHPlTtySHEvCp172coeskrtO",                                 // nonce
+			"0965c3377da8cb95b27ba02b04292dbf4640f3d988da7644e79e285f6d1bd11a", // sessionID (sid)
+			"BE",                                                               // country
+			"particle-ios",                                                     // audience (aud[0])
+		)
+
+		logging.Log(token, logging.Debug)
+	}
+
 	err := app.mailService.LoadAllLocales()
 	if err != nil {
 		logging.Log(err.Error(), logging.Fatal)

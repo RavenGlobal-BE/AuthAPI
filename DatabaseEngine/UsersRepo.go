@@ -106,7 +106,7 @@ func (Ur *Usersrepo) RegisterAccount(email, password, firstName, lastName, count
 	_, err = Ur.db.pool.Exec(context.Background(), `
 		INSERT INTO accounts.users (user_id, email, password, first_name, last_name, "publicusername", "countrycode", middle_name)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, userid, email, password, firstName, optionalString(lastName), optionalString(username), optionalString(middleName))
+	`, userid, email, password, firstName, optionalString(lastName), optionalString(username), countryCode, optionalString(middleName))
 
 	if err != nil {
 		return err
