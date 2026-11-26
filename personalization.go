@@ -130,7 +130,7 @@ func (a *App) uploadPhoto(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"url": "cdn-p1.raven.co.com/auth/profile/" + name})
+	c.JSON(http.StatusCreated, gin.H{"url": "cdn-p1.raven.co.com/auth/profile/" + name, "key": name})
 }
 
 var ErrUserNotFound = errors.New("user not found")
